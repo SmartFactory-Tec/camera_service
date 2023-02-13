@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"os"
@@ -61,10 +60,10 @@ func loadConfig(logger *zap.SugaredLogger) Config {
 		if errors.As(err, &notFoundError) {
 			logger.Infow("file not found, creating default config file", "file", configLoader.ConfigFileUsed())
 			if err := configLoader.SafeWriteConfig(); err != nil {
-				logger.Fatal(fmt.Errorf("could not create default config file: %w", err))
+				logger.Fatalf("could not create default config file: %s", err)
 			}
 		} else {
-			logger.Fatal(fmt.Errorf("could not read config file: %w", err))
+			logger.Fatalf("could not read config file: %s", err)
 		}
 	} else {
 		logger.Infow("loaded service config from config file", "file", configLoader.ConfigFileUsed())
@@ -73,7 +72,7 @@ func loadConfig(logger *zap.SugaredLogger) Config {
 	var config Config
 
 	if err := configLoader.Unmarshal(&config); err != nil {
-		logger.Fatal(fmt.Errorf("error unmarshaling config file: %w", err))
+		logger.Fatal("error unmarshaling config file: %s", err)
 		return Config{}
 	}
 

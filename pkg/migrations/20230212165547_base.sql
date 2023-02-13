@@ -10,12 +10,12 @@ create table cameras (
                          name text not null,
                          connection_string text not null,
                          location_text text not null,
-                         location_id int not null references locations
+                         location_id int references locations
 );
 
 create table camera_detections (
     id bigserial primary key,
-    camera_id bigint not null references cameras,
+    camera_id bigint references cameras,
     in_direction int not null,
     out_direction int not null,
     counter int not null,

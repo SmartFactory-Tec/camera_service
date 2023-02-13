@@ -5,6 +5,7 @@
 package dbschema
 
 import (
+	"database/sql"
 	"time"
 )
 
@@ -13,12 +14,12 @@ type Camera struct {
 	Name             string
 	ConnectionString string
 	LocationText     string
-	LocationID       int32
+	LocationID       sql.NullInt32
 }
 
 type CameraDetection struct {
 	ID                int64
-	CameraID          int64
+	CameraID          sql.NullInt64
 	InDirection       int32
 	OutDirection      int32
 	Counter           int32

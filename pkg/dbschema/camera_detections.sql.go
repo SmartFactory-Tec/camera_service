@@ -7,6 +7,7 @@ package dbschema
 
 import (
 	"context"
+	"database/sql"
 	"time"
 )
 
@@ -16,7 +17,7 @@ values ($1, $2, $3, $4, $5, $6)
 `
 
 type CreateCameraDetectionParams struct {
-	CameraID          int64
+	CameraID          sql.NullInt64
 	InDirection       int32
 	OutDirection      int32
 	Counter           int32
