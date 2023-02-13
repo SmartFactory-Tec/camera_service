@@ -7,7 +7,7 @@ import (
 func main() {
 	logger := setupLogger()
 
-	config := LoadConfig(logger)
+	config := loadConfig(logger)
 
 	dbConfig := config.Db
 

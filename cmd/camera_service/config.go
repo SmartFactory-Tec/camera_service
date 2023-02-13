@@ -17,7 +17,7 @@ type (
 	}
 )
 
-func LoadConfig(logger *zap.SugaredLogger) Config {
+func loadConfig(logger *zap.SugaredLogger) Config {
 	configLoader := viper.New()
 
 	if v, ok := os.LookupEnv("CAMERA_SERVICE_CONFIG"); ok {

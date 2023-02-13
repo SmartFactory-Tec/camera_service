@@ -13,7 +13,7 @@ create table cameras (
                          location_id int not null references locations
 );
 
-create table camera_detection (
+create table camera_detections (
     id bigserial primary key,
     camera_id bigint not null references cameras,
     in_direction int not null,
@@ -24,7 +24,7 @@ create table camera_detection (
 );
 
 -- +goose Down
-drop table camera_detection;
+drop table camera_detections;
 drop table cameras;
 drop table locations;
 

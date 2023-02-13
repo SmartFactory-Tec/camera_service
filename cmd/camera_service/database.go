@@ -1,10 +1,10 @@
 package main
 
 import (
-	"camera_service/pkg/migrations"
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/SmartFactory-Tec/camera_service/pkg/migrations"
 	"github.com/pressly/goose/v3"
 	"go.uber.org/zap"
 	"time"
