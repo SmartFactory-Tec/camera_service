@@ -115,7 +115,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Camera'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Camera'
     post:
       summary: Create a camera
       requestBody:
@@ -180,7 +182,7 @@ paths:
       summary: Delete a camera
       responses:
         200:
-          description: requested camera
+          description: Succesfully deleted camera
           content:
             application/json:
               schema:
@@ -194,7 +196,7 @@ paths:
         500:
           $ref: '#/components/responses/InternalServerError'
 
-  /camera/{cameraId}/cameraDetections:
+  /cameras/{cameraId}/cameraDetections:
     parameters:
       - $ref: '#/components/parameters/CameraId'
     get:
@@ -205,9 +207,31 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CameraDetection'
+                type: array
+                items:
+                  $ref: '#/components/schemas/CameraDetection'
+  /cameraDetections:
+    get:
+      summary: Get all camera detections
+      responses:
+        200:
+          description: All camera descriptions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CameraDetection'
+        400:
+          $ref: '#/components/responses/BadResourceRequest'
+        404:
+          $ref: '#/components/responses/ResourceNotFound'
+        409:
+          $ref: '#/components/responses/ResourceConflict'
+        500:
+          $ref: '#/components/responses/InternalServerError'
     post:
-      summary: Create a camera detection in this camera
+      summary: Create a camera detection
       requestBody:
         content:
           application/json:
@@ -224,15 +248,14 @@ paths:
           $ref: '#/components/responses/ResourceConflict'
         500:
           $ref: '#/components/responses/InternalServerError'
-  /cameras/{cameraId}/cameraDetections/{cameraDetectionId}:
+  /cameraDetections/{cameraDetectionId}:
     parameters:
-      - $ref: '#/components/parameters/CameraId'
       - $ref: '#/components/parameters/CameraDetectionId'
     get:
       summary: Get a camera detection
       responses:
         200:
-          description: requested camera
+          description: requested camera detectopm
           content:
             application/json:
               schema:
@@ -248,19 +271,19 @@ paths:
         500:
           $ref: '#/components/responses/InternalServerError'
     patch:
-      summary: Update an existing camera with new values
+      summary: Update an existing camera detection with new values
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CameraMutation'
+              $ref: '#/components/schemas/CameraDetectionMutation'
       responses:
         200:
-          description: Succesfully patched camera
+          description: Succesfully patched camera detection
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Camera'
+                $ref: '#/components/schemas/CameraDetection'
         400:
           $ref: '#/components/responses/BadResourceRequest'
         404:
@@ -270,14 +293,10 @@ paths:
         500:
           $ref: '#/components/responses/InternalServerError'
     delete:
-      summary: Delete a camera
+      summary: Delete a camera detection
       responses:
         200:
-          description: requested camera
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Camera'
+          description: Succesfully deleted camera detection
         400:
           $ref: '#/components/responses/BadResourceRequest'
         404:
@@ -411,6 +430,8 @@ components:
           type: integer
         social_distancing_v:
           type: integer
+        detection_date:
+          $ref: '#/components/schemas/Timestamp'
 
     CameraDetectionMutation:
       type: object
@@ -425,6 +446,8 @@ components:
           type: integer
         social_distancing_v:
           type: integer
+        detection_date:
+          $ref: '#/components/schemas/Timestamp'
           
     Timestamp:
       type: object
