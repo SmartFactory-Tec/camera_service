@@ -10,25 +10,25 @@ import (
 )
 
 type Camera struct {
-	ID               int64
-	Name             string
-	ConnectionString string
-	LocationText     string
-	LocationID       sql.NullInt32
+	ID               int64  `json:"id"`
+	Name             string `json:"name"`
+	ConnectionString string `json:"connection_string"`
+	LocationText     string `json:"location_text"`
+	LocationID       int32  `json:"location_id"`
 }
 
 type CameraDetection struct {
-	ID                int64
-	CameraID          sql.NullInt64
-	InDirection       int32
-	OutDirection      int32
-	Counter           int32
-	SocialDistancingV int32
-	DetectionDate     time.Time
+	ID                int64         `json:"id"`
+	CameraID          sql.NullInt64 `json:"camera_id"`
+	InDirection       int32         `json:"in_direction"`
+	OutDirection      int32         `json:"out_direction"`
+	Counter           int32         `json:"counter"`
+	SocialDistancingV int32         `json:"social_distancing_v"`
+	DetectionDate     time.Time     `json:"detection_date"`
 }
 
 type Location struct {
-	ID          int64
-	Name        string
-	Description string
+	ID          int64  `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
 }

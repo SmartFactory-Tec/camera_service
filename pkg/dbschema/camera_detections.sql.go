@@ -17,12 +17,12 @@ values ($1, $2, $3, $4, $5, $6)
 `
 
 type CreateCameraDetectionParams struct {
-	CameraID          sql.NullInt64
-	InDirection       int32
-	OutDirection      int32
-	Counter           int32
-	SocialDistancingV int32
-	DetectionDate     time.Time
+	CameraID          sql.NullInt64 `json:"camera_id"`
+	InDirection       int32         `json:"in_direction"`
+	OutDirection      int32         `json:"out_direction"`
+	Counter           int32         `json:"counter"`
+	SocialDistancingV int32         `json:"social_distancing_v"`
+	DetectionDate     time.Time     `json:"detection_date"`
 }
 
 func (q *Queries) CreateCameraDetection(ctx context.Context, arg CreateCameraDetectionParams) error {
@@ -155,12 +155,12 @@ returning id, camera_id, in_direction, out_direction, counter, social_distancing
 `
 
 type UpdateCameraDetectionParams struct {
-	ID                int64
-	InDirection       int32
-	OutDirection      int32
-	Counter           int32
-	SocialDistancingV int32
-	DetectionDate     time.Time
+	ID                int64     `json:"id"`
+	InDirection       int32     `json:"in_direction"`
+	OutDirection      int32     `json:"out_direction"`
+	Counter           int32     `json:"counter"`
+	SocialDistancingV int32     `json:"social_distancing_v"`
+	DetectionDate     time.Time `json:"detection_date"`
 }
 
 func (q *Queries) UpdateCameraDetection(ctx context.Context, arg UpdateCameraDetectionParams) (CameraDetection, error) {

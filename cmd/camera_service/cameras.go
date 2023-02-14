@@ -12,12 +12,12 @@ import (
 	"strconv"
 )
 
-func makeCreateLocationHandler(queries *dbschema.Queries, logger *zap.SugaredLogger) http.HandlerFunc {
-	logger = logger.Named("CreateLocation")
+func makeCreateCameraHandler(queries *dbschema.Queries, logger *zap.SugaredLogger) http.HandlerFunc {
+	logger = logger.Named("CreateCamera")
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
-		params := dbschema.CreateLocationParams{}
+		params := dbschema.CreateCameraParams{}
 
 		dec := json.NewDecoder(r.Body)
 
@@ -27,12 +27,12 @@ func makeCreateLocationHandler(queries *dbschema.Queries, logger *zap.SugaredLog
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		}
 
-		if err := queries.CreateLocation(ctx, params); err != nil {
+		if err := queries.CreateCamera(ctx, params); err != nil {
 			if err, ok := err.(*pq.Error); ok {
 				HandlePqError(w, r, err, logger)
 				return
 			}
-			err = fmt.Errorf("error creating location: %w", err)
+			err = fmt.Errorf("error creating camera detection: %w", err)
 			logger.Error(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -42,22 +42,23 @@ func makeCreateLocationHandler(queries *dbschema.Queries, logger *zap.SugaredLog
 	}
 }
 
-func makeGetLocationsHandler(queries *dbschema.Queries, logger *zap.SugaredLogger) http.HandlerFunc {
-	logger = logger.Named("GetLocations")
+func makeGetCamerasHandler(queries *dbschema.Queries, logger *zap.SugaredLogger) http.HandlerFunc {
+	logger = logger.Named("GetCameras")
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		locations, err := queries.GetLocations(ctx)
+		cameras, err := queries.GetCameras(ctx)
 		if err != nil {
 			if err, ok := err.(*pq.Error); ok {
 				HandlePqError(w, r, err, logger)
 				return
 			}
-			logger.Error(fmt.Errorf("error getting locations from db: %s", err))
-			w.WriteHeader(http.StatusInternalServerError)
+			err := fmt.Errorf("error getting cameras: %w", err)
+			logger.Error(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		body, err := json.Marshal(locations)
+		body, err := json.Marshal(cameras)
 		if err != nil {
 			logger.Errorf("error marshaling json body: %s", err)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -72,46 +73,48 @@ func makeGetLocationsHandler(queries *dbschema.Queries, logger *zap.SugaredLogge
 	}
 }
 
-func locationCtx(queries *dbschema.Queries, logger *zap.SugaredLogger) func(next http.Handler) http.Handler {
-	logger = logger.Named("locationCtx")
+func cameraCtx(queries *dbschema.Queries, logger *zap.SugaredLogger) func(next http.Handler) http.Handler {
+	logger = logger.Named("cameraCtx")
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
 
-			locationId, err := strconv.ParseInt(chi.URLParam(r, "locationId"), 10, 64)
+			cameraId, err := strconv.ParseInt(chi.URLParam(r, "cameraId"), 10, 64)
 			if err != nil {
-				logger.Errorf("error parsing location id: %s", err)
+				logger.Errorf("error parsing camera id: %s", err)
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
 
-			location, err := queries.GetLocation(ctx, locationId)
+			camera, err := queries.GetCamera(ctx, cameraId)
 			if err != nil {
 				if err, ok := err.(*pq.Error); ok {
 					HandlePqError(w, r, err, logger)
 					return
 				}
-				logger.Errorf("error getting location from db: %w", err)
-				w.WriteHeader(http.StatusInternalServerError)
+				err := fmt.Errorf("error getting camera: %w", err)
+				logger.Error(err)
+				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
-			next.ServeHTTP(w, r.WithContext(context.WithValue(ctx, "location", location)))
+			next.ServeHTTP(w, r.WithContext(context.WithValue(ctx, "camera", camera)))
 		})
 
 	}
 }
 
-func makeGetLocationHandler(logger *zap.SugaredLogger) http.HandlerFunc {
-	logger = logger.Named("GetLocation")
+func makeGetCameraHandler(logger *zap.SugaredLogger) http.HandlerFunc {
+	logger = logger.Named("GetCamera")
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		location := ctx.Value("location")
+		camera := ctx.Value("camera")
 
-		body, err := json.Marshal(location)
+		body, err := json.Marshal(camera)
 		if err != nil {
-			logger.Errorf("error marshaling json body: %s", err)
-			w.WriteHeader(http.StatusInternalServerError)
+			err := fmt.Errorf("error marshaling json body: %w", err)
+			logger.Error(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
@@ -122,17 +125,19 @@ func makeGetLocationHandler(logger *zap.SugaredLogger) http.HandlerFunc {
 	}
 }
 
-func makeUpdateLocationHandler(queries *dbschema.Queries, logger *zap.SugaredLogger) http.HandlerFunc {
-	logger = logger.Named("UpdateLocation")
+func makeUpdateCameraHandler(queries *dbschema.Queries, logger *zap.SugaredLogger) http.HandlerFunc {
+	logger = logger.Named("UpdateCamera")
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		location := ctx.Value("location").(dbschema.Location)
+		camera := ctx.Value("camera").(dbschema.Camera)
 
 		dec := json.NewDecoder(r.Body)
 
 		var reqBody struct {
-			Name        *string
-			Description *string
+			Name             *string
+			ConnectionString *string
+			LocationText     *string
+			LocationId       *int32
 		}
 
 		if err := dec.Decode(&reqBody); err != nil {
@@ -142,31 +147,39 @@ func makeUpdateLocationHandler(queries *dbschema.Queries, logger *zap.SugaredLog
 			return
 		}
 
-		params := dbschema.UpdateLocationParams{
-			ID:          location.ID,
-			Name:        location.Name,
-			Description: location.Description,
+		params := dbschema.UpdateCameraParams{
+			ID:               camera.ID,
+			Name:             camera.Name,
+			ConnectionString: camera.ConnectionString,
+			LocationText:     camera.LocationText,
+			LocationID:       camera.LocationID,
 		}
 
 		if reqBody.Name != nil {
 			params.Name = *reqBody.Name
 		}
-		if reqBody.Description != nil {
-			params.Description = *reqBody.Description
+		if reqBody.ConnectionString != nil {
+			params.ConnectionString = *reqBody.ConnectionString
+		}
+		if reqBody.LocationText != nil {
+			params.LocationText = *reqBody.LocationText
+		}
+		if reqBody.LocationId != nil {
+			params.LocationID = *reqBody.LocationId
 		}
 
-		location, err := queries.UpdateLocation(ctx, params)
+		camera, err := queries.UpdateCamera(ctx, params)
 		if err != nil {
 			if err, ok := err.(*pq.Error); ok {
 				HandlePqError(w, r, err, logger)
 				return
 			}
-			err = fmt.Errorf("error updating location: %s", err)
+			err = fmt.Errorf("error updating camera: %s", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		resBody, err := json.Marshal(location)
+		resBody, err := json.Marshal(camera)
 		if err != nil {
 			err := fmt.Errorf("error marshaling json body: %s", err)
 			logger.Error(err)
@@ -182,18 +195,18 @@ func makeUpdateLocationHandler(queries *dbschema.Queries, logger *zap.SugaredLog
 	}
 }
 
-func makeDeleteLocationHandler(queries *dbschema.Queries, logger *zap.SugaredLogger) http.HandlerFunc {
-	logger = logger.Named("DeleteLocation")
+func makeDeleteCameraHandler(queries *dbschema.Queries, logger *zap.SugaredLogger) http.HandlerFunc {
+	logger = logger.Named("DeleteCamera")
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		location := ctx.Value("location").(dbschema.Location)
+		camera := ctx.Value("camera").(dbschema.Camera)
 
-		if err := queries.DeleteLocation(ctx, location.ID); err != nil {
+		if err := queries.DeleteCamera(ctx, camera.ID); err != nil {
 			if err, ok := err.(*pq.Error); ok {
 				HandlePqError(w, r, err, logger)
 				return
 			}
-			err := fmt.Errorf("error deleting location: %w", err)
+			err := fmt.Errorf("error deleting camera: %w", err)
 			logger.Error(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

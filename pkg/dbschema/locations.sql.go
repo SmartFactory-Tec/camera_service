@@ -15,8 +15,8 @@ values ($1, $2)
 `
 
 type CreateLocationParams struct {
-	Name        string
-	Description string
+	Name        string `json:"name"`
+	Description string `json:"description"`
 }
 
 func (q *Queries) CreateLocation(ctx context.Context, arg CreateLocationParams) error {
@@ -86,9 +86,9 @@ returning id, name, description
 `
 
 type UpdateLocationParams struct {
-	ID          int64
-	Name        string
-	Description string
+	ID          int64  `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
 }
 
 func (q *Queries) UpdateLocation(ctx context.Context, arg UpdateLocationParams) (Location, error) {

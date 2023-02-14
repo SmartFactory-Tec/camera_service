@@ -33,6 +33,33 @@ func main() {
 		})
 	})
 
+	r.Route("/cameras", func(r chi.Router) {
+		r.Get("/", makeGetCamerasHandler(queries, logger))
+		r.Post("/", makeCreateCameraHandler(queries, logger))
+
+		r.Route("/{cameraId}", func(r chi.Router) {
+			r.Use(cameraCtx(queries, logger))
+			r.Get("/", makeGetCameraHandler(logger))
+			r.Patch("/", makeUpdateCameraHandler(queries, logger))
+			r.Delete("/", makeDeleteCameraHandler(queries, logger))
+
+			r.Get("/{cameraId}/cameraDetections", makeGetCameraDetectionsByCameraHandler(queries, logger))
+		})
+
+	})
+
+	r.Route("/cameraDetections", func(r chi.Router) {
+		r.Get("/", makeGetCameraDetectionsHandler(queries, logger))
+		r.Get("/", makeCreateCameraDetectionHandler(queries, logger))
+
+		r.Route("/{cameraDetectionId}", func(r chi.Router) {
+			r.Use(cameraDetectionCtx(queries, logger))
+			r.Get("/", makeGetCameraDetectionHandler(logger))
+			r.Patch("/", makeUpdateCameraDetectionHandler(queries, logger))
+			r.Delete("/", makeDeleteCameraDetectionHandler(queries, logger))
+		})
+	})
+
 	logger.Infof("starting server on port %d", config.Port)
 	err := http.ListenAndServe(fmt.Sprintf(":%d", config.Port), r)
 	if err != nil {

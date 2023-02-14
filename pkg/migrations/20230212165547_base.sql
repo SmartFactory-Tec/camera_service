@@ -10,7 +10,7 @@ create table cameras (
                          name text not null,
                          connection_string text not null,
                          location_text text not null,
-                         location_id int references locations
+                         location_id int references locations not null
 );
 
 create table camera_detections (

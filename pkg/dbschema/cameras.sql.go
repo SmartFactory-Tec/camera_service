@@ -7,7 +7,6 @@ package dbschema
 
 import (
 	"context"
-	"database/sql"
 )
 
 const createCamera = `-- name: CreateCamera :exec
@@ -16,10 +15,10 @@ values ($1, $2, $3, $4)
 `
 
 type CreateCameraParams struct {
-	Name             string
-	ConnectionString string
-	LocationText     string
-	LocationID       sql.NullInt32
+	Name             string `json:"name"`
+	ConnectionString string `json:"connection_string"`
+	LocationText     string `json:"location_text"`
+	LocationID       int32  `json:"location_id"`
 }
 
 func (q *Queries) CreateCamera(ctx context.Context, arg CreateCameraParams) error {
@@ -108,11 +107,11 @@ returning id, name, connection_string, location_text, location_id
 `
 
 type UpdateCameraParams struct {
-	ID               int64
-	Name             string
-	ConnectionString string
-	LocationText     string
-	LocationID       sql.NullInt32
+	ID               int64  `json:"id"`
+	Name             string `json:"name"`
+	ConnectionString string `json:"connection_string"`
+	LocationText     string `json:"location_text"`
+	LocationID       int32  `json:"location_id"`
 }
 
 func (q *Queries) UpdateCamera(ctx context.Context, arg UpdateCameraParams) (Camera, error) {
