@@ -1,0 +1,511 @@
+openapi: '3.0.0'
+info:
+  version: '0.1.0'
+  title: 'camera_service'
+  description: Central camera database
+servers:
+  - url: 'http://{hostname}:{port}'
+    variables:
+      hostname:
+        description: hostname of the server
+        default: localhost
+      port:
+        description: port of the server
+        default: '3000'
+paths:
+  /locations:
+    get:
+      summary: Get all locations
+      responses:
+        200:
+          description: All locations in the database
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Location'
+        400:
+          $ref: '#/components/responses/BadResourceRequest'
+        404:
+          $ref: '#/components/responses/ResourceNotFound'
+        409:
+          $ref: '#/components/responses/ResourceConflict'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      summary: Create a location
+      requestBody: 
+        content: 
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LocationCreation'
+      responses:
+        200:
+          $ref: '#/components/responses/ResourceCreated'
+        400:
+          $ref: '#/components/responses/BadResourceRequest'
+        404:
+          $ref: '#/components/responses/ResourceNotFound'
+        409:
+          $ref: '#/components/responses/ResourceConflict'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+  /locations/{locationId}:
+    parameters:
+      - $ref: '#/components/parameters/LocationId'
+    get:
+      summary: Get a location
+      responses:
+        200:
+          description: the location corresponding to the provided `locationId`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Location'
+        400:
+          $ref: '#/components/responses/BadResourceRequest'
+        404:
+          $ref: '#/components/responses/ResourceNotFound'
+        409:
+          $ref: '#/components/responses/ResourceConflict'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+    patch:
+      summary: Update an existing location with new values
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LocationMutation'
+      responses:
+        200:
+          description: location patched succesfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Location'
+        400:
+          $ref: '#/components/responses/BadResourceRequest'
+        404:
+          $ref: '#/components/responses/ResourceNotFound'
+        409:
+          $ref: '#/components/responses/ResourceConflict'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      summary: Delete a location
+      responses:
+        200:
+          description: location deleted succesfully
+        400:
+          $ref: '#/components/responses/BadResourceRequest'
+        404:
+          $ref: '#/components/responses/ResourceNotFound'
+        409:
+          $ref: '#/components/responses/ResourceConflict'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+  /cameras:
+    get:
+      summary: Get all cameras
+      responses:
+        200:
+          description: All cameras in the camera
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Camera'
+    post:
+      summary: Create a camera
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CameraCreation'
+      responses:
+        200:
+          $ref: '#/components/responses/ResourceCreated'
+        400:
+          $ref: '#/components/responses/BadResourceRequest'
+        404:
+          $ref: '#/components/responses/ResourceNotFound'
+        409:
+          $ref: '#/components/responses/ResourceConflict'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+  /cameras/{cameraId}:
+    parameters:
+      - $ref: '#/components/parameters/CameraId'
+    get:
+      summary: Get a camera
+      responses:
+        200:
+          description: requested camera
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Camera'
+        400:
+          $ref: '#/components/responses/BadResourceRequest'
+        404:
+          $ref: '#/components/responses/ResourceNotFound'
+        409:
+          $ref: '#/components/responses/ResourceConflict'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+    patch:
+      summary: Update an existing camera with new values
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CameraMutation'
+      responses:
+        200:
+          description: Succesfully patched camera
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Camera'
+        400:
+          $ref: '#/components/responses/BadResourceRequest'
+        404:
+          $ref: '#/components/responses/ResourceNotFound'
+        409:
+          $ref: '#/components/responses/ResourceConflict'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      summary: Delete a camera
+      responses:
+        200:
+          description: requested camera
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Camera'
+        400:
+          $ref: '#/components/responses/BadResourceRequest'
+        404:
+          $ref: '#/components/responses/ResourceNotFound'
+        409:
+          $ref: '#/components/responses/ResourceConflict'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
+  /camera/{cameraId}/cameraDetections:
+    parameters:
+      - $ref: '#/components/parameters/CameraId'
+    get:
+      summary: Get all camera detections for requested camera
+      responses:
+        200:
+          description: All camera detections for specific camera
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CameraDetection'
+    post:
+      summary: Create a camera detection in this camera
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CameraDetectionCreation'
+      responses:
+        200:
+          $ref: '#/components/responses/ResourceCreated'
+        400:
+          $ref: '#/components/responses/BadResourceRequest'
+        404:
+          $ref: '#/components/responses/ResourceNotFound'
+        409:
+          $ref: '#/components/responses/ResourceConflict'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+  /cameras/{cameraId}/cameraDetections/{cameraDetectionId}:
+    parameters:
+      - $ref: '#/components/parameters/CameraId'
+      - $ref: '#/components/parameters/CameraDetectionId'
+    get:
+      summary: Get a camera detection
+      responses:
+        200:
+          description: requested camera
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CameraDetection'
+        400:
+          $ref: '#/components/responses/BadResourceRequest'
+        404:
+          $ref: '#/components/responses/ResourceNotFound'
+        409:
+          $ref: '#/components/responses/ResourceConflict'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+    patch:
+      summary: Update an existing camera with new values
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CameraMutation'
+      responses:
+        200:
+          description: Succesfully patched camera
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Camera'
+        400:
+          $ref: '#/components/responses/BadResourceRequest'
+        404:
+          $ref: '#/components/responses/ResourceNotFound'
+        409:
+          $ref: '#/components/responses/ResourceConflict'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      summary: Delete a camera
+      responses:
+        200:
+          description: requested camera
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Camera'
+        400:
+          $ref: '#/components/responses/BadResourceRequest'
+        404:
+          $ref: '#/components/responses/ResourceNotFound'
+        409:
+          $ref: '#/components/responses/ResourceConflict'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+          
+components:
+  schemas:
+    Id:
+      type: integer
+    Location:
+      type: object
+      required:
+        - id
+        - name
+        - description
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+    LocationCreation:
+      type: object
+      required:
+        - name
+        - description
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+    LocationMutation:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+    Camera:
+      type: object
+      required:
+        - id
+        - name
+        - connection_string
+        - location_text
+        - location_id
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        connection_string:
+          type: string
+        location_text:
+          type: string
+        location_id:
+          type: integer
+    CameraCreation:
+      type: object
+      required:
+        - name
+        - connection_string
+        - location_text
+        - location_id
+      properties:
+        name: 
+          type: string
+        connection_string:
+          type: string
+        location_text:
+          type: string
+        location_id:
+          type: integer
+    CameraMutation:
+      type: object
+      properties:
+        name:
+          type: string
+        connection_string:
+          type: string
+        location_text: 
+          type: string
+        location_id:
+          type: integer
+    CameraDetection:
+      type: object
+      required:
+        - id
+        - camera_id
+        - in_direction
+        - out_direction
+        - counter
+        - social_distancing_v
+        - detection_date
+      properties:
+        id:
+          type: integer
+        camera_id:
+          type: integer
+        in_direction:
+          type: integer
+        out_direction:
+          type: integer
+        counter:
+          type: integer
+        social_distancing_v:
+          type: integer
+        detection_date:
+          $ref: '#/components/schemas/Timestamp'
+    CameraDetectionCreation:
+      type: string
+      required:
+        - camera_id
+        - in_direction
+        - out_direction
+        - counter
+        - social_distancing_v
+      properties:
+        camera_id:
+          type: integer
+        in_direction:
+          type: integer
+        out_direction:
+          type: integer
+        counter:
+          type: integer
+        social_distancing_v:
+          type: integer
+
+    CameraDetectionMutation:
+      type: object
+      properties:
+        camera_id:
+          type: integer
+        in_direction:
+          type: integer
+        out_direction:
+          type: integer
+        counter:
+          type: integer
+        social_distancing_v:
+          type: integer
+          
+    Timestamp:
+      type: object
+      required:
+        - year
+        - month
+        - day
+        - hour
+        - minute
+        - second
+      properties:
+        year:
+          type: integer
+        month:
+          type: integer
+          minimum: 1
+          maximum: 12
+        day:
+          type: integer
+          minimum: 1
+          maximum: 31
+        hour:
+          type: integer
+          minimum: 0
+          maximum: 23
+        minute:
+          type: integer
+          minimum: 0
+          maximum: 59
+        second:
+          type: integer
+          minimum: 0
+          maximum: 59
+    Error:
+      type: string
+      description: human readable error message
+
+  parameters:
+    LocationId:
+      name: locationId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Id'
+    CameraId:
+      name: cameraId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Id'
+    CameraDetectionId:
+      name: cameraDetectionId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Id'
+  responses:
+    ResourceCreated:
+      description: the resource has been succesfully created
+    BadResourceRequest:
+      description: malformed request for this resource
+      content:
+        text/plain:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ResourceNotFound:
+      description: requested resource could not be found
+      content:
+        text/plain:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ResourceConflict:
+      description: requested operation on resource conflicts with server status
+      content:
+        text/plain:
+          schema: 
+            $ref: '#/components/schemas/Error'
+    InternalServerError:
+      description: an unknown error has ocurred in the server
+      content:
+        text/plain:
+          schema:
+            $ref: '#/components/schemas/Error'
+    
