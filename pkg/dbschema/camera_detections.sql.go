@@ -106,6 +106,43 @@ func (q *Queries) GetCameraDetections(ctx context.Context) ([]CameraDetection, e
 	return items, nil
 }
 
+const getCameraDetectionsFromCamera = `-- name: GetCameraDetectionsFromCamera :many
+select id, camera_id, in_direction, out_direction, counter, social_distancing_v, detection_date from camera_detections
+where camera_id = $1
+order by id
+`
+
+func (q *Queries) GetCameraDetectionsFromCamera(ctx context.Context, cameraID sql.NullInt64) ([]CameraDetection, error) {
+	rows, err := q.db.QueryContext(ctx, getCameraDetectionsFromCamera, cameraID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CameraDetection
+	for rows.Next() {
+		var i CameraDetection
+		if err := rows.Scan(
+			&i.ID,
+			&i.CameraID,
+			&i.InDirection,
+			&i.OutDirection,
+			&i.Counter,
+			&i.SocialDistancingV,
+			&i.DetectionDate,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateCameraDetection = `-- name: UpdateCameraDetection :one
 update camera_detections
 set in_direction        = $2,

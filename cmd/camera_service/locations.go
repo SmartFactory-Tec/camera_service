@@ -191,8 +191,9 @@ func makeDeleteLocationHandler(queries *dbschema.Queries, logger *zap.SugaredLog
 				HandlePqError(w, r, err, logger)
 				return
 			}
-			logger.Errorf("error deleting location: %s", err)
-			w.WriteHeader(http.StatusInternalServerError)
+			err := fmt.Errorf("error deleting location: %w", err)
+			logger.Error(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 

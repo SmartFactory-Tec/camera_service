@@ -20,8 +20,8 @@ create table camera_detections (
     out_direction int not null,
     counter int not null,
     social_distancing_v int not null,
-    detection_date timestamp not null
-);
+    detection_date timestamp with time zone not null default clock_timestamp()
+) ;
 
 -- +goose Down
 drop table camera_detections;

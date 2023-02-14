@@ -3,6 +3,11 @@ select *
 from camera_detections
 where id = $1;
 
+-- name: GetCameraDetectionsFromCamera :many
+select * from camera_detections
+where camera_id = $1
+order by id;
+
 -- name: GetCameraDetections :many
 select *
 from camera_detections
@@ -26,5 +31,4 @@ returning *;
 delete
 from camera_detections
 where id = $1;
-
 
