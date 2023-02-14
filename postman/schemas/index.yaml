@@ -450,37 +450,8 @@ components:
           $ref: '#/components/schemas/Timestamp'
           
     Timestamp:
-      type: object
-      required:
-        - year
-        - month
-        - day
-        - hour
-        - minute
-        - second
-      properties:
-        year:
-          type: integer
-        month:
-          type: integer
-          minimum: 1
-          maximum: 12
-        day:
-          type: integer
-          minimum: 1
-          maximum: 31
-        hour:
-          type: integer
-          minimum: 0
-          maximum: 23
-        minute:
-          type: integer
-          minimum: 0
-          maximum: 59
-        second:
-          type: integer
-          minimum: 0
-          maximum: 59
+      type: string
+      format: date-time
     Error:
       type: string
       description: human readable error message
