@@ -4,12 +4,14 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/SmartFactory-Tec/camera_service/pkg/dbschema"
 	"github.com/go-chi/chi/v5"
 	"github.com/lib/pq"
 	"go.uber.org/zap"
 	"net/http"
+	"path"
 	"strconv"
 	"time"
 )
@@ -19,17 +21,52 @@ func makeCreateCameraDetectionHandler(queries *dbschema.Queries, logger *zap.Sug
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
-		params := dbschema.CreateCameraDetectionParams{}
+		requestBody := struct {
+			CameraId          int64      `json:"camera_id"`
+			InDirection       int32      `json:"in_direction"`
+			OutDirection      int32      `json:"out_direction"`
+			Counter           int32      `json:"counter"`
+			SocialDistancingV int32      `json:"social_distancing_v"`
+			DetectionDate     *time.Time `json:"detection_date"`
+		}{}
 
 		dec := json.NewDecoder(r.Body)
 
-		if err := dec.Decode(&params); err != nil {
+		if err := dec.Decode(&requestBody); err != nil {
 			err := fmt.Errorf("error decoding request body: %w", err)
 			logger.Error(err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		}
 
-		if err := queries.CreateCameraDetection(ctx, params); err != nil {
+		var (
+			id  int64
+			err error
+		)
+
+		if requestBody.DetectionDate != nil {
+			params := dbschema.CreateCameraDetectionWithDateParams{
+				CameraID:          requestBody.CameraId,
+				InDirection:       requestBody.InDirection,
+				OutDirection:      requestBody.OutDirection,
+				Counter:           requestBody.Counter,
+				SocialDistancingV: requestBody.SocialDistancingV,
+				DetectionDate:     *requestBody.DetectionDate,
+			}
+
+			id, err = queries.CreateCameraDetectionWithDate(ctx, params)
+		} else {
+			params := dbschema.CreateCameraDetectionParams{
+				CameraID:          requestBody.CameraId,
+				InDirection:       requestBody.InDirection,
+				OutDirection:      requestBody.OutDirection,
+				Counter:           requestBody.Counter,
+				SocialDistancingV: requestBody.SocialDistancingV,
+			}
+
+			id, err = queries.CreateCameraDetection(ctx, params)
+		}
+
+		if err != nil {
 			if err, ok := err.(*pq.Error); ok {
 				HandlePqError(w, r, err, logger)
 				return
@@ -40,7 +77,8 @@ func makeCreateCameraDetectionHandler(queries *dbschema.Queries, logger *zap.Sug
 			return
 		}
 
-		w.WriteHeader(http.StatusOK)
+		w.Header().Add("Location", path.Join(r.URL.String(), fmt.Sprintf("/%d", id)))
+		w.WriteHeader(http.StatusCreated)
 	}
 }
 
@@ -94,6 +132,10 @@ func cameraDetectionCtx(queries *dbschema.Queries, logger *zap.SugaredLogger) fu
 					HandlePqError(w, r, err, logger)
 					return
 				}
+				if errors.Is(err, sql.ErrNoRows) {
+					http.Error(w, "camera detection not found", http.StatusNotFound)
+					return
+				}
 				err := fmt.Errorf("error getting camera detection: %w", err)
 				logger.Error(err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -136,11 +178,11 @@ func makeUpdateCameraDetectionHandler(queries *dbschema.Queries, logger *zap.Sug
 		dec := json.NewDecoder(r.Body)
 
 		var reqBody struct {
-			InDirection       *int32
-			OutDirection      *int32
-			Counter           *int32
-			SocialDistancingV *int32
-			DetectionDate     *time.Time
+			InDirection       *int32     `json:"in_direction"`
+			OutDirection      *int32     `json:"out_direction"`
+			Counter           *int32     `json:"counter"`
+			SocialDistancingV *int32     `json:"social_distancing_v"`
+			DetectionDate     *time.Time `json:"detection_date"`
 		}
 
 		if err := dec.Decode(&reqBody); err != nil {
@@ -230,7 +272,7 @@ func makeGetCameraDetectionsByCameraHandler(queries *dbschema.Queries, logger *z
 		ctx := r.Context()
 		camera := ctx.Value("camera").(dbschema.Camera)
 
-		cameraDetections, err := queries.GetCameraDetectionsFromCamera(ctx, sql.NullInt64{Int64: camera.ID, Valid: true})
+		cameraDetections, err := queries.GetCameraDetectionsFromCamera(ctx, camera.ID)
 		if err != nil {
 			if err, ok := err.(*pq.Error); ok {
 				HandlePqError(w, r, err, logger)

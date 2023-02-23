@@ -15,7 +15,7 @@ create table cameras (
 
 create table camera_detections (
     id bigserial primary key,
-    camera_id bigint references cameras,
+    camera_id bigint not null references cameras,
     in_direction int not null,
     out_direction int not null,
     counter int not null,

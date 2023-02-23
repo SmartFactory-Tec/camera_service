@@ -2,13 +2,16 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/SmartFactory-Tec/camera_service/pkg/dbschema"
 	"github.com/go-chi/chi/v5"
 	"github.com/lib/pq"
 	"go.uber.org/zap"
 	"net/http"
+	"path"
 	"strconv"
 )
 
@@ -27,7 +30,8 @@ func makeCreateLocationHandler(queries *dbschema.Queries, logger *zap.SugaredLog
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		}
 
-		if err := queries.CreateLocation(ctx, params); err != nil {
+		id, err := queries.CreateLocation(ctx, params)
+		if err != nil {
 			if err, ok := err.(*pq.Error); ok {
 				HandlePqError(w, r, err, logger)
 				return
@@ -38,7 +42,8 @@ func makeCreateLocationHandler(queries *dbschema.Queries, logger *zap.SugaredLog
 			return
 		}
 
-		w.WriteHeader(http.StatusOK)
+		w.Header().Add("Location", path.Join(r.URL.String(), fmt.Sprintf("/%d", id)))
+		w.WriteHeader(http.StatusCreated)
 	}
 }
 
@@ -91,8 +96,13 @@ func locationCtx(queries *dbschema.Queries, logger *zap.SugaredLogger) func(next
 					HandlePqError(w, r, err, logger)
 					return
 				}
-				logger.Errorf("error getting location from db: %w", err)
-				w.WriteHeader(http.StatusInternalServerError)
+				if errors.Is(err, sql.ErrNoRows) {
+					http.Error(w, "location not found", http.StatusNotFound)
+					return
+				}
+				err := fmt.Errorf("error getting location: %w", err)
+				logger.Error(err)
+				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
@@ -131,8 +141,8 @@ func makeUpdateLocationHandler(queries *dbschema.Queries, logger *zap.SugaredLog
 		dec := json.NewDecoder(r.Body)
 
 		var reqBody struct {
-			Name        *string
-			Description *string
+			Name        *string `json:"name"`
+			Description *string `json:"description"`
 		}
 
 		if err := dec.Decode(&reqBody); err != nil {

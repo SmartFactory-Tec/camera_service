@@ -42,7 +42,7 @@ func testConnection(db *sql.DB, logger *zap.SugaredLogger) {
 
 	if err := db.PingContext(ctx); err != nil {
 
-		logger.Fatalf("could not connectToDb to database: %s", err)
+		logger.Fatalf("could not connect to database: %s", err)
 	}
 }
 
@@ -61,6 +61,8 @@ func updateDatabaseSchema(db *sql.DB, logger *zap.SugaredLogger) {
 }
 
 func HandlePqError(w http.ResponseWriter, r *http.Request, err *pq.Error, logger *zap.SugaredLogger) {
+	// TODO create better errors that do not expose internal database names
+	logger = logger.Named("HandlePqError")
 	switch err.Code {
 	case "23502":
 		// not-null constraint violation
@@ -72,8 +74,14 @@ func HandlePqError(w http.ResponseWriter, r *http.Request, err *pq.Error, logger
 		// foreign key violation
 		logger.Errorf("foreign key violation: %s", err.Message)
 		switch r.Method {
+		case "POST":
+			http.Error(w, fmt.Sprint("This resource can't be created because a the referenced id does not exist: \n\n", err.Detail), http.StatusConflict)
+			return
+		case "PATCH":
+			http.Error(w, fmt.Sprint("The resource can't be modified because a referenced id does not exist: \n\n", err.Detail), http.StatusConflict)
+			return
 		case "DELETE":
-			http.Error(w, fmt.Sprint("This record can’t be deleted because another record refers to it:\n\n", err.Detail), http.StatusConflict)
+			http.Error(w, fmt.Sprint("This resource can’t be deleted because another record refers to it:\n\n", err.Detail), http.StatusConflict)
 			return
 		}
 

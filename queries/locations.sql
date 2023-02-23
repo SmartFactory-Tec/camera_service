@@ -8,9 +8,10 @@ select *
 from locations
 order by id;
 
--- name: CreateLocation :exec
+-- name: CreateLocation :one
 insert into locations (name, description)
-values ($1, $2);
+values ($1, $2)
+returning id;
 
 -- name: UpdateLocation :one
 update locations

@@ -2,13 +2,16 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/SmartFactory-Tec/camera_service/pkg/dbschema"
 	"github.com/go-chi/chi/v5"
 	"github.com/lib/pq"
 	"go.uber.org/zap"
 	"net/http"
+	"path"
 	"strconv"
 )
 
@@ -27,7 +30,8 @@ func makeCreateCameraHandler(queries *dbschema.Queries, logger *zap.SugaredLogge
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		}
 
-		if err := queries.CreateCamera(ctx, params); err != nil {
+		id, err := queries.CreateCamera(ctx, params)
+		if err != nil {
 			if err, ok := err.(*pq.Error); ok {
 				HandlePqError(w, r, err, logger)
 				return
@@ -38,7 +42,8 @@ func makeCreateCameraHandler(queries *dbschema.Queries, logger *zap.SugaredLogge
 			return
 		}
 
-		w.WriteHeader(http.StatusOK)
+		w.Header().Add("Location", path.Join(r.URL.String(), fmt.Sprintf("/%d", id)))
+		w.WriteHeader(http.StatusCreated)
 	}
 }
 
@@ -81,8 +86,9 @@ func cameraCtx(queries *dbschema.Queries, logger *zap.SugaredLogger) func(next h
 
 			cameraId, err := strconv.ParseInt(chi.URLParam(r, "cameraId"), 10, 64)
 			if err != nil {
-				logger.Errorf("error parsing camera id: %s", err)
-				w.WriteHeader(http.StatusBadRequest)
+				err := fmt.Errorf("error parsing camera id: %w", err)
+				logger.Error(err)
+				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
 
@@ -90,6 +96,10 @@ func cameraCtx(queries *dbschema.Queries, logger *zap.SugaredLogger) func(next h
 			if err != nil {
 				if err, ok := err.(*pq.Error); ok {
 					HandlePqError(w, r, err, logger)
+					return
+				}
+				if errors.Is(err, sql.ErrNoRows) {
+					http.Error(w, "camera not found", http.StatusNotFound)
 					return
 				}
 				err := fmt.Errorf("error getting camera: %w", err)
@@ -134,10 +144,10 @@ func makeUpdateCameraHandler(queries *dbschema.Queries, logger *zap.SugaredLogge
 		dec := json.NewDecoder(r.Body)
 
 		var reqBody struct {
-			Name             *string
-			ConnectionString *string
-			LocationText     *string
-			LocationId       *int32
+			Name             *string `json:"name"`
+			ConnectionString *string `json:"connection_string"`
+			LocationText     *string `json:"location_text"`
+			LocationId       *int32  `json:"location_id"`
 		}
 
 		if err := dec.Decode(&reqBody); err != nil {

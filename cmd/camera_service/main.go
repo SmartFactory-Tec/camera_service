@@ -43,14 +43,14 @@ func main() {
 			r.Patch("/", makeUpdateCameraHandler(queries, logger))
 			r.Delete("/", makeDeleteCameraHandler(queries, logger))
 
-			r.Get("/{cameraId}/cameraDetections", makeGetCameraDetectionsByCameraHandler(queries, logger))
+			r.Get("/cameraDetections", makeGetCameraDetectionsByCameraHandler(queries, logger))
 		})
 
 	})
 
 	r.Route("/cameraDetections", func(r chi.Router) {
 		r.Get("/", makeGetCameraDetectionsHandler(queries, logger))
-		r.Get("/", makeCreateCameraDetectionHandler(queries, logger))
+		r.Post("/", makeCreateCameraDetectionHandler(queries, logger))
 
 		r.Route("/{cameraDetectionId}", func(r chi.Router) {
 			r.Use(cameraDetectionCtx(queries, logger))

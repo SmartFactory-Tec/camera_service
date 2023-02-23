@@ -8,9 +8,10 @@ select *
 from cameras
 order by id;
 
--- name: CreateCamera :exec
+-- name: CreateCamera :one
 insert into cameras(name, connection_string, location_text, location_id)
-values ($1, $2, $3, $4);
+values ($1, $2, $3, $4)
+returning id;
 
 -- name: UpdateCamera :one
 update cameras
