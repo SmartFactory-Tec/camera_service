@@ -22,7 +22,7 @@ type DbConfig struct {
 
 func connectToDb(config DbConfig, logger *zap.SugaredLogger) *sql.DB {
 	connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
-		config.User, config.User, config.Hostname, config.Port, config.Database)
+		config.User, config.Password, config.Hostname, config.Port, config.Database)
 
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
