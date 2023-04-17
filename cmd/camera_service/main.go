@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/SmartFactory-Tec/camera_service/pkg/dbschema"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/cors"
 	_ "github.com/lib/pq"
 	"net/http"
 )
@@ -18,7 +19,21 @@ func main() {
 	updateDatabaseSchema(db, logger)
 	queries := dbschema.New(db)
 
+	var allowedOrigins []string
+
+	if !config.Cors.AllowAllOrigins {
+		allowedOrigins = config.Cors.AllowedOrigins
+	}
+
 	r := chi.NewRouter()
+
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins: allowedOrigins,
+		AllowedMethods: []string{"GET", "OPTIONS", "POST", "PATCH"},
+		AllowedHeaders: []string{"*"},
+		ExposedHeaders: []string{"*"},
+	}))
+
 	r.Use(LogRequests(logger))
 
 	r.Route("/locations", func(r chi.Router) {

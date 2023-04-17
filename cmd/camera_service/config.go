@@ -9,10 +9,16 @@ import (
 )
 
 type (
+	CorsConfig struct {
+		AllowedOrigins  []string `mapstructure:"allowed_origins"`
+		AllowAllOrigins bool     `mapstructure:"allow_all_origins"`
+	}
 	Config struct {
-		Port int
+		Port int `mapstructure:"db"`
 
-		Db DbConfig
+		Db DbConfig `mapstructure:"db"`
+
+		Cors CorsConfig `mapstructure:"cors"`
 	}
 )
 
