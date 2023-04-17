@@ -22,7 +22,7 @@ COPY . .
 # Builds your app with optional configuration
 RUN go build -buildvcs=false -o ./camera_service github.com/SmartFactory-Tec/camera_service/cmd/camera_service
 
-ENV CAMERA_SERVER_CONFIG=/config
+ENV CAMERA_SERVICE_CONFIG=/config
 
 # Tells Docker which network port your container listens on
 EXPOSE 3000
