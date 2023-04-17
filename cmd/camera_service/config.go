@@ -14,7 +14,7 @@ type (
 		AllowAllOrigins bool     `mapstructure:"allow_all_origins"`
 	}
 	Config struct {
-		Port int `mapstructure:"db"`
+		Port int `mapstructure:"port"`
 
 		Db DbConfig `mapstructure:"db"`
 
