@@ -23,9 +23,9 @@ returning *;
 
 -- name: UpdatePersonDetection :one
 update person_detections
-set camera_id        = $2,
-    detection_date   = $3,
-    target_direction = $4
+set camera_id        = coalesce(sqlc.narg('camera_id'), camera_id),
+    detection_date   = coalesce(sqlc.narg('detection_date'), detection_date),
+    target_direction = coalesce(sqlc.narg('target_direction'), target_direction)
 where id = $1
 returning *;
 

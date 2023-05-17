@@ -21,7 +21,7 @@ type CreateLocationParams struct {
 }
 
 func (q *Queries) CreateLocation(ctx context.Context, arg CreateLocationParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, createLocation, arg.Name, arg.Description)
+	row := q.db.QueryRow(ctx, createLocation, arg.Name, arg.Description)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
@@ -34,7 +34,7 @@ where id = $1
 `
 
 func (q *Queries) DeleteLocation(ctx context.Context, id int64) error {
-	_, err := q.db.ExecContext(ctx, deleteLocation, id)
+	_, err := q.db.Exec(ctx, deleteLocation, id)
 	return err
 }
 
@@ -45,7 +45,7 @@ where id = $1
 `
 
 func (q *Queries) GetLocation(ctx context.Context, id int64) (Location, error) {
-	row := q.db.QueryRowContext(ctx, getLocation, id)
+	row := q.db.QueryRow(ctx, getLocation, id)
 	var i Location
 	err := row.Scan(&i.ID, &i.Name, &i.Description)
 	return i, err
@@ -58,7 +58,7 @@ order by id
 `
 
 func (q *Queries) GetLocations(ctx context.Context) ([]Location, error) {
-	rows, err := q.db.QueryContext(ctx, getLocations)
+	rows, err := q.db.Query(ctx, getLocations)
 	if err != nil {
 		return nil, err
 	}
@@ -70,9 +70,6 @@ func (q *Queries) GetLocations(ctx context.Context) ([]Location, error) {
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -95,7 +92,7 @@ type UpdateLocationParams struct {
 }
 
 func (q *Queries) UpdateLocation(ctx context.Context, arg UpdateLocationParams) (Location, error) {
-	row := q.db.QueryRowContext(ctx, updateLocation, arg.ID, arg.Name, arg.Description)
+	row := q.db.QueryRow(ctx, updateLocation, arg.ID, arg.Name, arg.Description)
 	var i Location
 	err := row.Scan(&i.ID, &i.Name, &i.Description)
 	return i, err

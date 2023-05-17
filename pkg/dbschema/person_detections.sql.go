@@ -7,7 +7,8 @@ package dbschema
 
 import (
 	"context"
-	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createPersonDetection = `-- name: CreatePersonDetection :one
@@ -17,13 +18,13 @@ returning id, camera_id, detection_date, target_direction
 `
 
 type CreatePersonDetectionParams struct {
-	CameraID        int64     `json:"camera_id"`
-	DetectionDate   time.Time `json:"detection_date"`
-	TargetDirection Direction `json:"target_direction"`
+	CameraID        int64              `json:"camera_id"`
+	DetectionDate   pgtype.Timestamptz `json:"detection_date"`
+	TargetDirection Direction          `json:"target_direction"`
 }
 
 func (q *Queries) CreatePersonDetection(ctx context.Context, arg CreatePersonDetectionParams) (PersonDetection, error) {
-	row := q.db.QueryRowContext(ctx, createPersonDetection, arg.CameraID, arg.DetectionDate, arg.TargetDirection)
+	row := q.db.QueryRow(ctx, createPersonDetection, arg.CameraID, arg.DetectionDate, arg.TargetDirection)
 	var i PersonDetection
 	err := row.Scan(
 		&i.ID,
@@ -41,7 +42,7 @@ where id = $1
 `
 
 func (q *Queries) DeletePersonDetection(ctx context.Context, id int64) error {
-	_, err := q.db.ExecContext(ctx, deletePersonDetection, id)
+	_, err := q.db.Exec(ctx, deletePersonDetection, id)
 	return err
 }
 
@@ -52,7 +53,7 @@ where id = $1
 `
 
 func (q *Queries) GetPersonDetection(ctx context.Context, id int64) (PersonDetection, error) {
-	row := q.db.QueryRowContext(ctx, getPersonDetection, id)
+	row := q.db.QueryRow(ctx, getPersonDetection, id)
 	var i PersonDetection
 	err := row.Scan(
 		&i.ID,
@@ -76,7 +77,7 @@ type GetPersonDetectionsParams struct {
 }
 
 func (q *Queries) GetPersonDetections(ctx context.Context, arg GetPersonDetectionsParams) ([]PersonDetection, error) {
-	rows, err := q.db.QueryContext(ctx, getPersonDetections, arg.DetectionOffset, arg.Count)
+	rows, err := q.db.Query(ctx, getPersonDetections, arg.DetectionOffset, arg.Count)
 	if err != nil {
 		return nil, err
 	}
@@ -93,9 +94,6 @@ func (q *Queries) GetPersonDetections(ctx context.Context, arg GetPersonDetectio
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -118,7 +116,7 @@ type GetPersonDetectionsForCameraParams struct {
 }
 
 func (q *Queries) GetPersonDetectionsForCamera(ctx context.Context, arg GetPersonDetectionsForCameraParams) ([]PersonDetection, error) {
-	rows, err := q.db.QueryContext(ctx, getPersonDetectionsForCamera, arg.CameraID, arg.DetectionOffset, arg.Count)
+	rows, err := q.db.Query(ctx, getPersonDetectionsForCamera, arg.CameraID, arg.DetectionOffset, arg.Count)
 	if err != nil {
 		return nil, err
 	}
@@ -136,9 +134,6 @@ func (q *Queries) GetPersonDetectionsForCamera(ctx context.Context, arg GetPerso
 		}
 		items = append(items, i)
 	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -147,22 +142,22 @@ func (q *Queries) GetPersonDetectionsForCamera(ctx context.Context, arg GetPerso
 
 const updatePersonDetection = `-- name: UpdatePersonDetection :one
 update person_detections
-set camera_id        = $2,
-    detection_date   = $3,
-    target_direction = $4
+set camera_id        = coalesce($2, camera_id),
+    detection_date   = coalesce($3, detection_date),
+    target_direction = coalesce($4, target_direction)
 where id = $1
 returning id, camera_id, detection_date, target_direction
 `
 
 type UpdatePersonDetectionParams struct {
-	ID              int64     `json:"id"`
-	CameraID        int64     `json:"camera_id"`
-	DetectionDate   time.Time `json:"detection_date"`
-	TargetDirection Direction `json:"target_direction"`
+	ID              int64              `json:"id"`
+	CameraID        pgtype.Int8        `json:"camera_id"`
+	DetectionDate   pgtype.Timestamptz `json:"detection_date"`
+	TargetDirection NullDirection      `json:"target_direction"`
 }
 
 func (q *Queries) UpdatePersonDetection(ctx context.Context, arg UpdatePersonDetectionParams) (PersonDetection, error) {
-	row := q.db.QueryRowContext(ctx, updatePersonDetection,
+	row := q.db.QueryRow(ctx, updatePersonDetection,
 		arg.ID,
 		arg.CameraID,
 		arg.DetectionDate,

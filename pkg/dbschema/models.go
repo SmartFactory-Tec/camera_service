@@ -7,7 +7,8 @@ package dbschema
 import (
 	"database/sql/driver"
 	"fmt"
-	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type CameraOrientation string
@@ -108,13 +109,13 @@ type Camera struct {
 }
 
 type CameraDetection struct {
-	ID                int64     `json:"id"`
-	CameraID          int64     `json:"camera_id"`
-	InDirection       int32     `json:"in_direction"`
-	OutDirection      int32     `json:"out_direction"`
-	Counter           int32     `json:"counter"`
-	SocialDistancingV int32     `json:"social_distancing_v"`
-	DetectionDate     time.Time `json:"detection_date"`
+	ID                int64              `json:"id"`
+	CameraID          int64              `json:"camera_id"`
+	InDirection       int32              `json:"in_direction"`
+	OutDirection      int32              `json:"out_direction"`
+	Counter           int32              `json:"counter"`
+	SocialDistancingV int32              `json:"social_distancing_v"`
+	DetectionDate     pgtype.Timestamptz `json:"detection_date"`
 }
 
 type Location struct {
@@ -124,8 +125,8 @@ type Location struct {
 }
 
 type PersonDetection struct {
-	ID              int64     `json:"id"`
-	CameraID        int64     `json:"camera_id"`
-	DetectionDate   time.Time `json:"detection_date"`
-	TargetDirection Direction `json:"target_direction"`
+	ID              int64              `json:"id"`
+	CameraID        int64              `json:"camera_id"`
+	DetectionDate   pgtype.Timestamptz `json:"detection_date"`
+	TargetDirection Direction          `json:"target_direction"`
 }

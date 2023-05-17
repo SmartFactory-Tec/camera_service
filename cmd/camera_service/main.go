@@ -5,7 +5,6 @@ import (
 	"github.com/SmartFactory-Tec/camera_service/pkg/dbschema"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
-	_ "github.com/lib/pq"
 	"net/http"
 )
 
@@ -63,14 +62,14 @@ func main() {
 
 	})
 
-	r.Route("/cameraDetections", func(r chi.Router) {
-		r.Get("/", makeGetCameraDetectionsHandler(queries, logger))
-		r.Post("/", makeCreateCameraDetectionHandler(queries, logger))
+	r.Route("/personDetections", func(r chi.Router) {
+		r.Get("/", makeGetPersonDetectionsHandler(queries, logger))
+		r.Post("/", makeCreatePersonDetectionHandler(queries, logger))
 
-		r.Route("/{cameraDetectionId}", func(r chi.Router) {
-			r.Use(cameraDetectionCtx(queries, logger))
-			r.Get("/", makeGetCameraDetectionHandler(logger))
-			r.Patch("/", makeUpdateCameraDetectionHandler(queries, logger))
+		r.Route("/{personDetectionId}", func(r chi.Router) {
+			r.Use(personDetectionCtx(queries, logger))
+			r.Get("/", makeGetPersonDetectionHandler(logger))
+			r.Patch("/", makeUpdatePersonDetectionHandler(queries, logger))
 			r.Delete("/", makeDeleteCameraDetectionHandler(queries, logger))
 		})
 	})

@@ -23,7 +23,7 @@ type CreateCameraParams struct {
 }
 
 func (q *Queries) CreateCamera(ctx context.Context, arg CreateCameraParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, createCamera,
+	row := q.db.QueryRow(ctx, createCamera,
 		arg.Name,
 		arg.ConnectionString,
 		arg.LocationText,
@@ -41,7 +41,7 @@ where id = $1
 `
 
 func (q *Queries) DeleteCamera(ctx context.Context, id int64) error {
-	_, err := q.db.ExecContext(ctx, deleteCamera, id)
+	_, err := q.db.Exec(ctx, deleteCamera, id)
 	return err
 }
 
@@ -52,7 +52,7 @@ where id = $1
 `
 
 func (q *Queries) GetCamera(ctx context.Context, id int64) (Camera, error) {
-	row := q.db.QueryRowContext(ctx, getCamera, id)
+	row := q.db.QueryRow(ctx, getCamera, id)
 	var i Camera
 	err := row.Scan(
 		&i.ID,
@@ -73,7 +73,7 @@ order by id
 `
 
 func (q *Queries) GetCameras(ctx context.Context) ([]Camera, error) {
-	rows, err := q.db.QueryContext(ctx, getCameras)
+	rows, err := q.db.Query(ctx, getCameras)
 	if err != nil {
 		return nil, err
 	}
@@ -93,9 +93,6 @@ func (q *Queries) GetCameras(ctx context.Context) ([]Camera, error) {
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -122,7 +119,7 @@ type UpdateCameraParams struct {
 }
 
 func (q *Queries) UpdateCamera(ctx context.Context, arg UpdateCameraParams) (Camera, error) {
-	row := q.db.QueryRowContext(ctx, updateCamera,
+	row := q.db.QueryRow(ctx, updateCamera,
 		arg.ID,
 		arg.Name,
 		arg.ConnectionString,
