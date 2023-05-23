@@ -2,13 +2,13 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/SmartFactory-Tec/camera_service/pkg/dbschema"
 	"github.com/go-chi/chi/v5"
-	"github.com/lib/pq"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"go.uber.org/zap"
 	"net/http"
 	"path"
@@ -28,14 +28,15 @@ func makeCreateLocationHandler(queries *dbschema.Queries, logger *zap.SugaredLog
 			err := fmt.Errorf("error decoding request body: %w", err)
 			logger.Error(err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
 		}
 
 		id, err := queries.CreateLocation(ctx, params)
-		if err != nil {
-			if err, ok := err.(*pq.Error); ok {
-				HandlePqError(w, r, err, logger)
-				return
-			}
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			HandlePqError(w, r, pgErr, logger)
+			return
+		} else if err != nil {
 			err = fmt.Errorf("error creating location: %w", err)
 			logger.Error(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -52,11 +53,12 @@ func makeGetLocationsHandler(queries *dbschema.Queries, logger *zap.SugaredLogge
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		locations, err := queries.GetLocations(ctx)
-		if err != nil {
-			if err, ok := err.(*pq.Error); ok {
-				HandlePqError(w, r, err, logger)
-				return
-			}
+
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			HandlePqError(w, r, pgErr, logger)
+			return
+		} else if err != nil {
 			logger.Error(fmt.Errorf("error getting locations from db: %s", err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -91,15 +93,14 @@ func locationCtx(queries *dbschema.Queries, logger *zap.SugaredLogger) func(next
 			}
 
 			location, err := queries.GetLocation(ctx, locationId)
-			if err != nil {
-				if err, ok := err.(*pq.Error); ok {
-					HandlePqError(w, r, err, logger)
-					return
-				}
-				if errors.Is(err, sql.ErrNoRows) {
-					http.Error(w, "location not found", http.StatusNotFound)
-					return
-				}
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) {
+				HandlePqError(w, r, pgErr, logger)
+				return
+			} else if errors.Is(err, pgx.ErrNoRows) {
+				http.Error(w, "location not found", http.StatusNotFound)
+				return
+			} else if err != nil {
 				err := fmt.Errorf("error getting location: %w", err)
 				logger.Error(err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -166,11 +167,11 @@ func makeUpdateLocationHandler(queries *dbschema.Queries, logger *zap.SugaredLog
 		}
 
 		location, err := queries.UpdateLocation(ctx, params)
-		if err != nil {
-			if err, ok := err.(*pq.Error); ok {
-				HandlePqError(w, r, err, logger)
-				return
-			}
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			HandlePqError(w, r, pgErr, logger)
+			return
+		} else if err != nil {
 			err = fmt.Errorf("error updating location: %s", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -198,11 +199,13 @@ func makeDeleteLocationHandler(queries *dbschema.Queries, logger *zap.SugaredLog
 		ctx := r.Context()
 		location := ctx.Value("location").(dbschema.Location)
 
-		if err := queries.DeleteLocation(ctx, location.ID); err != nil {
-			if err, ok := err.(*pq.Error); ok {
-				HandlePqError(w, r, err, logger)
-				return
-			}
+		err := queries.DeleteLocation(ctx, location.ID)
+
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			HandlePqError(w, r, pgErr, logger)
+			return
+		} else if err != nil {
 			err := fmt.Errorf("error deleting location: %w", err)
 			logger.Error(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)

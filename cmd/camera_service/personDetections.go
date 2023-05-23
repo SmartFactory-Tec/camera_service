@@ -2,33 +2,25 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/SmartFactory-Tec/camera_service/pkg/dbschema"
 	"github.com/go-chi/chi/v5"
-	"github.com/lib/pq"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"go.uber.org/zap"
 	"net/http"
 	"path"
 	"strconv"
-	"time"
 )
 
-func makeCreateCameraDetectionHandler(queries *dbschema.Queries, logger *zap.SugaredLogger) http.HandlerFunc {
-	logger = logger.Named("CreateCameraDetection")
+func makeCreatePersonDetectionHandler(queries *dbschema.Queries, logger *zap.SugaredLogger) http.HandlerFunc {
+	logger = logger.Named("CreatePersonDetection")
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
-		requestBody := struct {
-			CameraId          int64      `json:"camera_id"`
-			InDirection       int32      `json:"in_direction"`
-			OutDirection      int32      `json:"out_direction"`
-			Counter           int32      `json:"counter"`
-			SocialDistancingV int32      `json:"social_distancing_v"`
-			DetectionDate     *time.Time `json:"detection_date"`
-		}{}
+		requestBody := dbschema.CreatePersonDetectionParams{}
 
 		dec := json.NewDecoder(r.Body)
 
@@ -36,69 +28,75 @@ func makeCreateCameraDetectionHandler(queries *dbschema.Queries, logger *zap.Sug
 			err := fmt.Errorf("error decoding request body: %w", err)
 			logger.Error(err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
 		}
 
-		var (
-			id  int64
-			err error
-		)
+		personDetection, err := queries.CreatePersonDetection(ctx, requestBody)
 
-		if requestBody.DetectionDate != nil {
-			params := dbschema.CreateCameraDetectionWithDateParams{
-				CameraID:          requestBody.CameraId,
-				InDirection:       requestBody.InDirection,
-				OutDirection:      requestBody.OutDirection,
-				Counter:           requestBody.Counter,
-				SocialDistancingV: requestBody.SocialDistancingV,
-				DetectionDate:     *requestBody.DetectionDate,
-			}
-
-			id, err = queries.CreateCameraDetectionWithDate(ctx, params)
-		} else {
-			params := dbschema.CreateCameraDetectionParams{
-				CameraID:          requestBody.CameraId,
-				InDirection:       requestBody.InDirection,
-				OutDirection:      requestBody.OutDirection,
-				Counter:           requestBody.Counter,
-				SocialDistancingV: requestBody.SocialDistancingV,
-			}
-
-			id, err = queries.CreateCameraDetection(ctx, params)
-		}
-
-		if err != nil {
-			if err, ok := err.(*pq.Error); ok {
-				HandlePqError(w, r, err, logger)
-				return
-			}
+		var pqErr *pgconn.PgError
+		if errors.As(err, &pqErr) {
+			HandlePqError(w, r, pqErr, logger)
+			return
+		} else if err != nil {
 			err = fmt.Errorf("error creating camera detection: %w", err)
 			logger.Error(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		w.Header().Add("Location", path.Join(r.URL.String(), fmt.Sprintf("/%d", id)))
-		w.WriteHeader(http.StatusCreated)
-	}
-}
-
-func makeGetCameraDetectionsHandler(queries *dbschema.Queries, logger *zap.SugaredLogger) http.HandlerFunc {
-	logger = logger.Named("GetCameraDetections")
-	return func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-		cameraDetections, err := queries.GetCameraDetections(ctx)
+		body, err := json.Marshal(personDetection)
 		if err != nil {
-			if err, ok := err.(*pq.Error); ok {
-				HandlePqError(w, r, err, logger)
-				return
-			}
-			err := fmt.Errorf("error getting camera detections: %w", err)
+			err = fmt.Errorf("error marshaling camera detection: %w", err)
 			logger.Error(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		body, err := json.Marshal(cameraDetections)
+		w.Header().Add("Location", path.Join(r.URL.String(), fmt.Sprintf("/%d", personDetection.ID)))
+		w.Header().Add("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		if _, err = w.Write(body); err != nil {
+			err = fmt.Errorf("error writing body: %w", err)
+			logger.Error(err)
+		}
+	}
+}
+
+func makeGetPersonDetectionsHandler(queries *dbschema.Queries, logger *zap.SugaredLogger) http.HandlerFunc {
+	logger = logger.Named("GetPersonDetections")
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		offset, err := strconv.ParseInt(chi.URLParam(r, "offset"), 10, 32)
+		if err != nil {
+			err := fmt.Errorf("request does not contain parameter offset: %w", err)
+			logger.Error(err)
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		count, err := strconv.ParseInt(chi.URLParam(r, "count"), 10, 32)
+		if err != nil {
+			err := fmt.Errorf("request does not contain parameter count: %w", err)
+			logger.Error(err)
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		params := dbschema.GetPersonDetectionsParams{
+			DetectionOffset: int32(offset),
+			Count:           int32(count),
+		}
+		personDetections, err := queries.GetPersonDetections(ctx, params)
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			HandlePqError(w, r, pgErr, logger)
+			return
+		} else if err != nil {
+			err := fmt.Errorf("error getting person detections: %w", err)
+			logger.Error(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		body, err := json.Marshal(personDetections)
 		if err != nil {
 			logger.Errorf("error marshaling json body: %s", err)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -113,48 +111,47 @@ func makeGetCameraDetectionsHandler(queries *dbschema.Queries, logger *zap.Sugar
 	}
 }
 
-func cameraDetectionCtx(queries *dbschema.Queries, logger *zap.SugaredLogger) func(next http.Handler) http.Handler {
-	logger = logger.Named("cameraDetectionCtx")
+func personDetectionCtx(queries *dbschema.Queries, logger *zap.SugaredLogger) func(next http.Handler) http.Handler {
+	logger = logger.Named("personDetectionCtx")
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
 
-			cameraDetectionId, err := strconv.ParseInt(chi.URLParam(r, "cameraDetectionId"), 10, 64)
+			personDetectionId, err := strconv.ParseInt(chi.URLParam(r, "personDetectionId"), 10, 64)
 			if err != nil {
-				logger.Errorf("error parsing camera id: %s", err)
+				logger.Errorf("error parsing person detection id: %s", err)
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
 
-			cameraDetection, err := queries.GetCameraDetection(ctx, cameraDetectionId)
-			if err != nil {
-				if err, ok := err.(*pq.Error); ok {
-					HandlePqError(w, r, err, logger)
-					return
-				}
-				if errors.Is(err, sql.ErrNoRows) {
-					http.Error(w, "camera detection not found", http.StatusNotFound)
-					return
-				}
-				err := fmt.Errorf("error getting camera detection: %w", err)
+			personDetection, err := queries.GetPersonDetection(ctx, personDetectionId)
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) {
+				HandlePqError(w, r, pgErr, logger)
+				return
+			} else if errors.Is(err, pgx.ErrNoRows) {
+				http.Error(w, "person detection not found", http.StatusNotFound)
+				return
+			} else if err != nil {
+				err := fmt.Errorf("error getting person detection: %w", err)
 				logger.Error(err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
-			next.ServeHTTP(w, r.WithContext(context.WithValue(ctx, "cameraDetection", cameraDetection)))
+			next.ServeHTTP(w, r.WithContext(context.WithValue(ctx, "personDetection", personDetection)))
 		})
 
 	}
 }
 
-func makeGetCameraDetectionHandler(logger *zap.SugaredLogger) http.HandlerFunc {
-	logger = logger.Named("GetCameraDetectionHandler")
+func makeGetPersonDetectionHandler(logger *zap.SugaredLogger) http.HandlerFunc {
+	logger = logger.Named("GetPersonDetectionHandler")
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		cameraDetection := ctx.Value("cameraDetection")
+		personDetection := ctx.Value("personDetection")
 
-		body, err := json.Marshal(cameraDetection)
+		body, err := json.Marshal(personDetection)
 		if err != nil {
 			err := fmt.Errorf("error marshaling json body: %w", err)
 			logger.Error(err)
@@ -169,66 +166,35 @@ func makeGetCameraDetectionHandler(logger *zap.SugaredLogger) http.HandlerFunc {
 	}
 }
 
-func makeUpdateCameraDetectionHandler(queries *dbschema.Queries, logger *zap.SugaredLogger) http.HandlerFunc {
-	logger = logger.Named("UpdateCameraDetection")
+func makeUpdatePersonDetectionHandler(queries *dbschema.Queries, logger *zap.SugaredLogger) http.HandlerFunc {
+	logger = logger.Named("UpdatePersonDetection")
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		cameraDetection := ctx.Value("cameraDetection").(dbschema.CameraDetection)
+		personDetection := ctx.Value("personDetection").(dbschema.PersonDetection)
 
 		dec := json.NewDecoder(r.Body)
 
-		var reqBody struct {
-			InDirection       *int32     `json:"in_direction"`
-			OutDirection      *int32     `json:"out_direction"`
-			Counter           *int32     `json:"counter"`
-			SocialDistancingV *int32     `json:"social_distancing_v"`
-			DetectionDate     *time.Time `json:"detection_date"`
-		}
+		params := dbschema.UpdatePersonDetectionParams{}
 
-		if err := dec.Decode(&reqBody); err != nil {
-			err = fmt.Errorf("invalid reqBody: %w", err)
+		if err := dec.Decode(&params); err != nil {
+			err = fmt.Errorf("invalid request body: %w", err)
 			logger.Error(err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
-		params := dbschema.UpdateCameraDetectionParams{
-			ID:                cameraDetection.ID,
-			InDirection:       cameraDetection.InDirection,
-			OutDirection:      cameraDetection.OutDirection,
-			Counter:           cameraDetection.Counter,
-			SocialDistancingV: cameraDetection.SocialDistancingV,
-			DetectionDate:     cameraDetection.DetectionDate,
-		}
-
-		if reqBody.InDirection != nil {
-			params.InDirection = *reqBody.InDirection
-		}
-		if reqBody.OutDirection != nil {
-			params.OutDirection = *reqBody.OutDirection
-		}
-		if reqBody.Counter != nil {
-			params.Counter = *reqBody.Counter
-		}
-		if reqBody.SocialDistancingV != nil {
-			params.SocialDistancingV = *reqBody.SocialDistancingV
-		}
-		if reqBody.DetectionDate != nil {
-			params.DetectionDate = *reqBody.DetectionDate
-		}
-
-		cameraDetection, err := queries.UpdateCameraDetection(ctx, params)
-		if err != nil {
-			if err, ok := err.(*pq.Error); ok {
-				HandlePqError(w, r, err, logger)
-				return
-			}
-			err = fmt.Errorf("error updating camera detection: %s", err)
+		personDetection, err := queries.UpdatePersonDetection(ctx, params)
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			HandlePqError(w, r, pgErr, logger)
+			return
+		} else if err != nil {
+			err = fmt.Errorf("error updating person detection: %s", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		resBody, err := json.Marshal(cameraDetection)
+		body, err := json.Marshal(personDetection)
 		if err != nil {
 			err := fmt.Errorf("error marshaling json body: %s", err)
 			logger.Error(err)
@@ -238,53 +204,71 @@ func makeUpdateCameraDetectionHandler(queries *dbschema.Queries, logger *zap.Sug
 
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		if _, err := w.Write(resBody); err != nil {
+		if _, err := w.Write(body); err != nil {
 			logger.Errorf("error writing json body: %s", err)
 		}
 	}
 }
 
-func makeDeleteCameraDetectionHandler(queries *dbschema.Queries, logger *zap.SugaredLogger) http.HandlerFunc {
-	logger = logger.Named("DeleteCameraDetection")
+func makeDeletePersonDetectionHandler(queries *dbschema.Queries, logger *zap.SugaredLogger) http.HandlerFunc {
+	logger = logger.Named("DeletePersonDetection")
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		cameraDetection := ctx.Value("cameraDetection").(dbschema.CameraDetection)
+		personDetection := ctx.Value("personDetection").(dbschema.PersonDetection)
 
-		if err := queries.DeleteCameraDetection(ctx, cameraDetection.ID); err != nil {
-			if err, ok := err.(*pq.Error); ok {
-				HandlePqError(w, r, err, logger)
-				return
-			}
-			err := fmt.Errorf("error deleting camera detection: %w", err)
+		err := queries.DeletePersonDetection(ctx, personDetection.ID)
+
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			HandlePqError(w, r, pgErr, logger)
+			return
+		} else if err != nil {
+			err := fmt.Errorf("error deleting person detection: %w", err)
 			logger.Error(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		w.WriteHeader(http.StatusOK)
-
 	}
 }
 
-func makeGetCameraDetectionsByCameraHandler(queries *dbschema.Queries, logger *zap.SugaredLogger) http.HandlerFunc {
-	logger = logger.Named("GetCameraDetectionsByCamera")
+func makeGetPersonDetectionsByCameraHandler(queries *dbschema.Queries, logger *zap.SugaredLogger) http.HandlerFunc {
+	logger = logger.Named("GetPersonDetectionsByCamera")
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		camera := ctx.Value("camera").(dbschema.Camera)
-
-		cameraDetections, err := queries.GetCameraDetectionsFromCamera(ctx, camera.ID)
+		offset, err := strconv.ParseInt(chi.URLParam(r, "offset"), 10, 32)
 		if err != nil {
-			if err, ok := err.(*pq.Error); ok {
-				HandlePqError(w, r, err, logger)
-				return
-			}
-			err := fmt.Errorf("error getting camera detections: %w", err)
+			err := fmt.Errorf("request does not contain parameter offset: %w", err)
+			logger.Error(err)
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		}
+		count, err := strconv.ParseInt(chi.URLParam(r, "count"), 10, 32)
+		if err != nil {
+			err := fmt.Errorf("request does not contain parameter count: %w", err)
+			logger.Error(err)
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		params := dbschema.GetPersonDetectionsForCameraParams{
+			CameraID:        camera.ID,
+			DetectionOffset: int32(offset),
+			Count:           int32(count),
+		}
+		personDetections, err := queries.GetPersonDetectionsForCamera(ctx, params)
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			HandlePqError(w, r, pgErr, logger)
+			return
+		} else if err != nil {
+			err := fmt.Errorf("error getting person detections: %w", err)
 			logger.Error(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		body, err := json.Marshal(cameraDetections)
+		body, err := json.Marshal(personDetections)
 		if err != nil {
 			logger.Errorf("error marshaling json body: %s", err)
 			w.WriteHeader(http.StatusInternalServerError)

@@ -8,6 +8,7 @@ import (
 	"database/sql/driver"
 	"fmt"
 
+	"github.com/SmartFactory-Tec/camera_service/pkg/dbenums"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -99,13 +100,13 @@ func (ns NullDirection) Value() (driver.Value, error) {
 }
 
 type Camera struct {
-	ID               int64             `json:"id"`
-	Name             string            `json:"name"`
-	ConnectionString string            `json:"connection_string"`
-	LocationText     string            `json:"location_text"`
-	LocationID       int32             `json:"location_id"`
-	Orientation      CameraOrientation `json:"orientation"`
-	EntryDirection   Direction         `json:"entry_direction"`
+	ID               int64                     `json:"id"`
+	Name             string                    `json:"name"`
+	ConnectionString string                    `json:"connection_string"`
+	LocationText     string                    `json:"location_text"`
+	LocationID       int32                     `json:"location_id"`
+	Orientation      dbenums.CameraOrientation `json:"orientation"`
+	EntryDirection   Direction                 `json:"entry_direction"`
 }
 
 type CameraDetection struct {

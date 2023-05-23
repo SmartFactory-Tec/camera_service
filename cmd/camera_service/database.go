@@ -5,7 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/SmartFactory-Tec/camera_service/pkg/migrations"
-	"github.com/lib/pq"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/pressly/goose/v3"
 	"go.uber.org/zap"
 	"net/http"
@@ -20,33 +21,38 @@ type DbConfig struct {
 	Password string
 }
 
-func connectToDb(config DbConfig, logger *zap.SugaredLogger) *sql.DB {
+func connectToDb(config DbConfig, logger *zap.SugaredLogger) *pgx.Conn {
 	connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
 		config.User, config.Password, config.Hostname, config.Port, config.Database)
 
-	db, err := sql.Open("postgres", connStr)
+	conn, err := pgx.Connect(context.Background(), connStr)
 	if err != nil {
 		logger.Fatal("error parsing db connection string: %w", err)
 	}
 
-	testConnection(db, logger)
+	testConnection(conn, logger)
 
 	logger.Infow("connected to database", "name", config.Database)
 
-	return db
+	return conn
 }
 
-func testConnection(db *sql.DB, logger *zap.SugaredLogger) {
+func testConnection(conn *pgx.Conn, logger *zap.SugaredLogger) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
-	if err := db.PingContext(ctx); err != nil {
+	if err := conn.Ping(ctx); err != nil {
 
 		logger.Fatalf("could not connect to database: %s", err)
 	}
 }
 
-func updateDatabaseSchema(db *sql.DB, logger *zap.SugaredLogger) {
+func updateDatabaseSchema(config DbConfig, logger *zap.SugaredLogger) {
+	connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable")
+	db, err := sql.Open("postgres", connStr)
+	if err != nil {
+		logger.Fatalf("could not connect to database for migrations: %w", err)
+	}
 	goose.SetBaseFS(migrations.Migrations)
 
 	if err := goose.SetDialect("postgres"); err != nil {
@@ -60,7 +66,7 @@ func updateDatabaseSchema(db *sql.DB, logger *zap.SugaredLogger) {
 	logger.Infow("updated database schema")
 }
 
-func HandlePqError(w http.ResponseWriter, r *http.Request, err *pq.Error, logger *zap.SugaredLogger) {
+func HandlePqError(w http.ResponseWriter, r *http.Request, err *pgconn.PgError, logger *zap.SugaredLogger) {
 	// TODO create better errors that do not expose internal database names
 	logger = logger.Named("HandlePqError")
 	switch err.Code {

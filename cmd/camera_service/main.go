@@ -15,7 +15,7 @@ func main() {
 	dbConfig := config.Db
 
 	db := connectToDb(dbConfig, logger)
-	updateDatabaseSchema(db, logger)
+	updateDatabaseSchema(dbConfig, logger)
 	queries := dbschema.New(db)
 
 	var allowedOrigins []string
@@ -57,7 +57,7 @@ func main() {
 			r.Patch("/", makeUpdateCameraHandler(queries, logger))
 			r.Delete("/", makeDeleteCameraHandler(queries, logger))
 
-			r.Get("/cameraDetections", makeGetCameraDetectionsByCameraHandler(queries, logger))
+			r.Get("/cameraDetections", makeGetPersonDetectionsByCameraHandler(queries, logger))
 		})
 
 	})
@@ -70,7 +70,7 @@ func main() {
 			r.Use(personDetectionCtx(queries, logger))
 			r.Get("/", makeGetPersonDetectionHandler(logger))
 			r.Patch("/", makeUpdatePersonDetectionHandler(queries, logger))
-			r.Delete("/", makeDeleteCameraDetectionHandler(queries, logger))
+			r.Delete("/", makeDeletePersonDetectionHandler(queries, logger))
 		})
 	})
 

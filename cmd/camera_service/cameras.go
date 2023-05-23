@@ -2,13 +2,13 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/SmartFactory-Tec/camera_service/pkg/dbschema"
 	"github.com/go-chi/chi/v5"
-	"github.com/lib/pq"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"go.uber.org/zap"
 	"net/http"
 	"path"
@@ -31,11 +31,12 @@ func makeCreateCameraHandler(queries *dbschema.Queries, logger *zap.SugaredLogge
 		}
 
 		id, err := queries.CreateCamera(ctx, params)
-		if err != nil {
-			if err, ok := err.(*pq.Error); ok {
-				HandlePqError(w, r, err, logger)
-				return
-			}
+
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			HandlePqError(w, r, pgErr, logger)
+			return
+		} else if err != nil {
 			err = fmt.Errorf("error creating camera detection: %w", err)
 			logger.Error(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -52,11 +53,11 @@ func makeGetCamerasHandler(queries *dbschema.Queries, logger *zap.SugaredLogger)
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		cameras, err := queries.GetCameras(ctx)
-		if err != nil {
-			if err, ok := err.(*pq.Error); ok {
-				HandlePqError(w, r, err, logger)
-				return
-			}
+
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			HandlePqError(w, r, pgErr, logger)
+		} else if err != nil {
 			err := fmt.Errorf("error getting cameras: %w", err)
 			logger.Error(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -93,24 +94,20 @@ func cameraCtx(queries *dbschema.Queries, logger *zap.SugaredLogger) func(next h
 			}
 
 			camera, err := queries.GetCamera(ctx, cameraId)
-			if err != nil {
-				if err, ok := err.(*pq.Error); ok {
-					HandlePqError(w, r, err, logger)
-					return
-				}
-				if errors.Is(err, sql.ErrNoRows) {
-					http.Error(w, "camera not found", http.StatusNotFound)
-					return
-				}
+
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) {
+				HandlePqError(w, r, pgErr, logger)
+			} else if errors.Is(err, pgx.ErrNoRows) {
+				http.Error(w, "camera not found", http.StatusNotFound)
+			} else if err != nil {
 				err := fmt.Errorf("error getting camera: %w", err)
 				logger.Error(err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
+			} else {
+				next.ServeHTTP(w, r.WithContext(context.WithValue(ctx, "camera", camera)))
 			}
-
-			next.ServeHTTP(w, r.WithContext(context.WithValue(ctx, "camera", camera)))
 		})
-
 	}
 }
 
@@ -179,11 +176,14 @@ func makeUpdateCameraHandler(queries *dbschema.Queries, logger *zap.SugaredLogge
 		}
 
 		camera, err := queries.UpdateCamera(ctx, params)
-		if err != nil {
-			if err, ok := err.(*pq.Error); ok {
-				HandlePqError(w, r, err, logger)
-				return
-			}
+
+		var pgErr *pgconn.PgError
+
+		switch {
+		case errors.As(err, &pgErr):
+			HandlePqError(w, r, pgErr, logger)
+			return
+		case err != nil:
 			err = fmt.Errorf("error updating camera: %s", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -211,18 +211,17 @@ func makeDeleteCameraHandler(queries *dbschema.Queries, logger *zap.SugaredLogge
 		ctx := r.Context()
 		camera := ctx.Value("camera").(dbschema.Camera)
 
-		if err := queries.DeleteCamera(ctx, camera.ID); err != nil {
-			if err, ok := err.(*pq.Error); ok {
-				HandlePqError(w, r, err, logger)
-				return
-			}
+		err := queries.DeleteCamera(ctx, camera.ID)
+
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			HandlePqError(w, r, pgErr, logger)
+		} else if err != nil {
 			err := fmt.Errorf("error deleting camera: %w", err)
 			logger.Error(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+		} else {
+			w.WriteHeader(http.StatusOK)
 		}
-
-		w.WriteHeader(http.StatusOK)
-
 	}
 }

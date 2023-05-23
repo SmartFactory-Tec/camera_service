@@ -8,6 +8,7 @@ package dbschema
 import (
 	"context"
 
+	"github.com/SmartFactory-Tec/camera_service/pkg/dbenums"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -153,7 +154,7 @@ type UpdatePersonDetectionParams struct {
 	ID              int64              `json:"id"`
 	CameraID        pgtype.Int8        `json:"camera_id"`
 	DetectionDate   pgtype.Timestamptz `json:"detection_date"`
-	TargetDirection NullDirection      `json:"target_direction"`
+	TargetDirection dbenums.Direction  `json:"target_direction"`
 }
 
 func (q *Queries) UpdatePersonDetection(ctx context.Context, arg UpdatePersonDetectionParams) (PersonDetection, error) {
