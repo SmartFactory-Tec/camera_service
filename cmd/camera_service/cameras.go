@@ -20,7 +20,7 @@ func makeCreateCameraHandler(queries *dbschema.Queries, logger *zap.SugaredLogge
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
-		params := dbschema.CreateCameraParams{}
+		var params dbschema.CreateCameraParams
 
 		dec := json.NewDecoder(r.Body)
 
@@ -30,7 +30,7 @@ func makeCreateCameraHandler(queries *dbschema.Queries, logger *zap.SugaredLogge
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		}
 
-		id, err := queries.CreateCamera(ctx, params)
+		camera, err := queries.CreateCamera(ctx, params)
 
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
@@ -43,8 +43,21 @@ func makeCreateCameraHandler(queries *dbschema.Queries, logger *zap.SugaredLogge
 			return
 		}
 
-		w.Header().Add("Location", path.Join(r.URL.String(), fmt.Sprintf("/%d", id)))
+		body, err := json.Marshal(camera)
+		if err != nil {
+			err = fmt.Errorf("error marshaling body: %w", err)
+			logger.Error(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Add("Location", path.Join(r.URL.String(), fmt.Sprintf("/%d", camera.ID)))
+		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
+		if _, err := w.Write(body); err != nil {
+			err = fmt.Errorf("error writing body: %w", err)
+			logger.Error(err)
+		}
 	}
 }
 
@@ -140,51 +153,25 @@ func makeUpdateCameraHandler(queries *dbschema.Queries, logger *zap.SugaredLogge
 
 		dec := json.NewDecoder(r.Body)
 
-		var reqBody struct {
-			Name             *string `json:"name"`
-			ConnectionString *string `json:"connection_string"`
-			LocationText     *string `json:"location_text"`
-			LocationId       *int32  `json:"location_id"`
-		}
+		var params dbschema.UpdateCameraParams
 
-		if err := dec.Decode(&reqBody); err != nil {
-			err = fmt.Errorf("invalid reqBody: %w", err)
+		if err := dec.Decode(&params); err != nil {
+			err = fmt.Errorf("invalid body: %w", err)
 			logger.Error(err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-
-		params := dbschema.UpdateCameraParams{
-			ID:               camera.ID,
-			Name:             camera.Name,
-			ConnectionString: camera.ConnectionString,
-			LocationText:     camera.LocationText,
-			LocationID:       camera.LocationID,
-		}
-
-		if reqBody.Name != nil {
-			params.Name = *reqBody.Name
-		}
-		if reqBody.ConnectionString != nil {
-			params.ConnectionString = *reqBody.ConnectionString
-		}
-		if reqBody.LocationText != nil {
-			params.LocationText = *reqBody.LocationText
-		}
-		if reqBody.LocationId != nil {
-			params.LocationID = *reqBody.LocationId
-		}
+		params.ID = camera.ID
 
 		camera, err := queries.UpdateCamera(ctx, params)
 
 		var pgErr *pgconn.PgError
-
-		switch {
-		case errors.As(err, &pgErr):
+		if errors.As(err, &pgErr) {
 			HandlePqError(w, r, pgErr, logger)
 			return
-		case err != nil:
+		} else if err != nil {
 			err = fmt.Errorf("error updating camera: %s", err)
+			logger.Error(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}

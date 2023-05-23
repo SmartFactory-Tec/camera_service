@@ -15,8 +15,8 @@ const (
 	CameraOrientationInvertedHorizontal CameraOrientation = "inverted_horizontal"
 )
 
-func (co *CameraOrientation) Value() (driver.Value, error) {
-	return string(*co), nil
+func (co CameraOrientation) Value() (driver.Value, error) {
+	return string(co), nil
 }
 
 func (co *CameraOrientation) Scan(src any) error {
@@ -63,7 +63,7 @@ type NullCameraOrientation struct {
 	Valid             bool
 }
 
-func (co *NullCameraOrientation) Value() (driver.Value, error) {
+func (co NullCameraOrientation) Value() (driver.Value, error) {
 	if !co.Valid {
 		return nil, nil
 	}

@@ -12,50 +12,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type CameraOrientation string
-
-const (
-	CameraOrientationVertical           CameraOrientation = "vertical"
-	CameraOrientationHorizontal         CameraOrientation = "horizontal"
-	CameraOrientationInvertedVertical   CameraOrientation = "inverted_vertical"
-	CameraOrientationInvertedHorizontal CameraOrientation = "inverted_horizontal"
-)
-
-func (e *CameraOrientation) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = CameraOrientation(s)
-	case string:
-		*e = CameraOrientation(s)
-	default:
-		return fmt.Errorf("unsupported scan type for CameraOrientation: %T", src)
-	}
-	return nil
-}
-
-type NullCameraOrientation struct {
-	CameraOrientation CameraOrientation
-	Valid             bool // Valid is true if CameraOrientation is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullCameraOrientation) Scan(value interface{}) error {
-	if value == nil {
-		ns.CameraOrientation, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.CameraOrientation.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullCameraOrientation) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.CameraOrientation), nil
-}
-
 type Direction string
 
 const (
@@ -99,14 +55,57 @@ func (ns NullDirection) Value() (driver.Value, error) {
 	return string(ns.Direction), nil
 }
 
+type Orientation string
+
+const (
+	OrientationVertical           Orientation = "vertical"
+	OrientationHorizontal         Orientation = "horizontal"
+	OrientationInvertedVertical   Orientation = "inverted_vertical"
+	OrientationInvertedHorizontal Orientation = "inverted_horizontal"
+)
+
+func (e *Orientation) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = Orientation(s)
+	case string:
+		*e = Orientation(s)
+	default:
+		return fmt.Errorf("unsupported scan type for Orientation: %T", src)
+	}
+	return nil
+}
+
+type NullOrientation struct {
+	Orientation Orientation
+	Valid       bool // Valid is true if Orientation is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullOrientation) Scan(value interface{}) error {
+	if value == nil {
+		ns.Orientation, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.Orientation.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullOrientation) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.Orientation), nil
+}
+
 type Camera struct {
-	ID               int64                     `json:"id"`
-	Name             string                    `json:"name"`
-	ConnectionString string                    `json:"connection_string"`
-	LocationText     string                    `json:"location_text"`
-	LocationID       int32                     `json:"location_id"`
-	Orientation      dbenums.CameraOrientation `json:"orientation"`
-	EntryDirection   Direction                 `json:"entry_direction"`
+	ID               int64       `json:"id"`
+	Name             string      `json:"name"`
+	ConnectionString string      `json:"connection_string"`
+	LocationText     string      `json:"location_text"`
+	LocationID       int32       `json:"location_id"`
+	Orientation      Orientation `json:"orientation"`
 }
 
 type CameraDetection struct {
@@ -129,5 +128,5 @@ type PersonDetection struct {
 	ID              int64              `json:"id"`
 	CameraID        int64              `json:"camera_id"`
 	DetectionDate   pgtype.Timestamptz `json:"detection_date"`
-	TargetDirection Direction          `json:"target_direction"`
+	TargetDirection dbenums.Direction  `json:"target_direction"`
 }

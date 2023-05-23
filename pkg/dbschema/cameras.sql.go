@@ -7,31 +7,42 @@ package dbschema
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createCamera = `-- name: CreateCamera :one
-insert into cameras(name, connection_string, location_text, location_id)
-values ($1, $2, $3, $4)
-returning id
+insert into cameras(name, connection_string, location_text, location_id, orientation)
+values ($1, $2, $3, $4, $5)
+returning id, name, connection_string, location_text, location_id, orientation
 `
 
 type CreateCameraParams struct {
-	Name             string `json:"name"`
-	ConnectionString string `json:"connection_string"`
-	LocationText     string `json:"location_text"`
-	LocationID       int32  `json:"location_id"`
+	Name             string      `json:"name"`
+	ConnectionString string      `json:"connection_string"`
+	LocationText     string      `json:"location_text"`
+	LocationID       int32       `json:"location_id"`
+	Orientation      Orientation `json:"orientation"`
 }
 
-func (q *Queries) CreateCamera(ctx context.Context, arg CreateCameraParams) (int64, error) {
+func (q *Queries) CreateCamera(ctx context.Context, arg CreateCameraParams) (Camera, error) {
 	row := q.db.QueryRow(ctx, createCamera,
 		arg.Name,
 		arg.ConnectionString,
 		arg.LocationText,
 		arg.LocationID,
+		arg.Orientation,
 	)
-	var id int64
-	err := row.Scan(&id)
-	return id, err
+	var i Camera
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.ConnectionString,
+		&i.LocationText,
+		&i.LocationID,
+		&i.Orientation,
+	)
+	return i, err
 }
 
 const deleteCamera = `-- name: DeleteCamera :exec
@@ -46,7 +57,7 @@ func (q *Queries) DeleteCamera(ctx context.Context, id int64) error {
 }
 
 const getCamera = `-- name: GetCamera :one
-select id, name, connection_string, location_text, location_id, orientation, entry_direction
+select id, name, connection_string, location_text, location_id, orientation
 from cameras
 where id = $1
 `
@@ -61,13 +72,12 @@ func (q *Queries) GetCamera(ctx context.Context, id int64) (Camera, error) {
 		&i.LocationText,
 		&i.LocationID,
 		&i.Orientation,
-		&i.EntryDirection,
 	)
 	return i, err
 }
 
 const getCameras = `-- name: GetCameras :many
-select id, name, connection_string, location_text, location_id, orientation, entry_direction
+select id, name, connection_string, location_text, location_id, orientation
 from cameras
 order by id
 `
@@ -78,7 +88,7 @@ func (q *Queries) GetCameras(ctx context.Context) ([]Camera, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Camera
+	items := []Camera{}
 	for rows.Next() {
 		var i Camera
 		if err := rows.Scan(
@@ -88,7 +98,6 @@ func (q *Queries) GetCameras(ctx context.Context) ([]Camera, error) {
 			&i.LocationText,
 			&i.LocationID,
 			&i.Orientation,
-			&i.EntryDirection,
 		); err != nil {
 			return nil, err
 		}
@@ -102,20 +111,22 @@ func (q *Queries) GetCameras(ctx context.Context) ([]Camera, error) {
 
 const updateCamera = `-- name: UpdateCamera :one
 update cameras
-set name              = $2,
-    connection_string = $3,
-    location_text     = $4,
-    location_id       = $5
+set name              = coalesce($2, name),
+    connection_string = coalesce($3, connection_string),
+    location_text     = coalesce($4, location_text),
+    location_id       = coalesce($5, location_id),
+    orientation       = coalesce($6, orientation)
 where id = $1
-returning id, name, connection_string, location_text, location_id, orientation, entry_direction
+returning id, name, connection_string, location_text, location_id, orientation
 `
 
 type UpdateCameraParams struct {
-	ID               int64  `json:"id"`
-	Name             string `json:"name"`
-	ConnectionString string `json:"connection_string"`
-	LocationText     string `json:"location_text"`
-	LocationID       int32  `json:"location_id"`
+	ID               int64           `json:"id"`
+	Name             pgtype.Text     `json:"name"`
+	ConnectionString pgtype.Text     `json:"connection_string"`
+	LocationText     pgtype.Text     `json:"location_text"`
+	LocationID       pgtype.Int4     `json:"location_id"`
+	Orientation      NullOrientation `json:"orientation"`
 }
 
 func (q *Queries) UpdateCamera(ctx context.Context, arg UpdateCameraParams) (Camera, error) {
@@ -125,6 +136,7 @@ func (q *Queries) UpdateCamera(ctx context.Context, arg UpdateCameraParams) (Cam
 		arg.ConnectionString,
 		arg.LocationText,
 		arg.LocationID,
+		arg.Orientation,
 	)
 	var i Camera
 	err := row.Scan(
@@ -134,7 +146,6 @@ func (q *Queries) UpdateCamera(ctx context.Context, arg UpdateCameraParams) (Cam
 		&i.LocationText,
 		&i.LocationID,
 		&i.Orientation,
-		&i.EntryDirection,
 	)
 	return i, err
 }

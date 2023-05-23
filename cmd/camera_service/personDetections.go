@@ -20,18 +20,17 @@ func makeCreatePersonDetectionHandler(queries *dbschema.Queries, logger *zap.Sug
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
-		requestBody := dbschema.CreatePersonDetectionParams{}
-
 		dec := json.NewDecoder(r.Body)
 
-		if err := dec.Decode(&requestBody); err != nil {
+		var params dbschema.CreatePersonDetectionParams
+		if err := dec.Decode(&params); err != nil {
 			err := fmt.Errorf("error decoding request body: %w", err)
 			logger.Error(err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
-		personDetection, err := queries.CreatePersonDetection(ctx, requestBody)
+		personDetection, err := queries.CreatePersonDetection(ctx, params)
 
 		var pqErr *pgconn.PgError
 		if errors.As(err, &pqErr) {
@@ -66,14 +65,16 @@ func makeGetPersonDetectionsHandler(queries *dbschema.Queries, logger *zap.Sugar
 	logger = logger.Named("GetPersonDetections")
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		offset, err := strconv.ParseInt(chi.URLParam(r, "offset"), 10, 32)
+		offsetStr := r.URL.Query().Get("offset")
+		countStr := r.URL.Query().Get("count")
+		offset, err := strconv.ParseInt(offsetStr, 10, 32)
 		if err != nil {
 			err := fmt.Errorf("request does not contain parameter offset: %w", err)
 			logger.Error(err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		count, err := strconv.ParseInt(chi.URLParam(r, "count"), 10, 32)
+		count, err := strconv.ParseInt(countStr, 10, 32)
 		if err != nil {
 			err := fmt.Errorf("request does not contain parameter count: %w", err)
 			logger.Error(err)
@@ -84,6 +85,7 @@ func makeGetPersonDetectionsHandler(queries *dbschema.Queries, logger *zap.Sugar
 			DetectionOffset: int32(offset),
 			Count:           int32(count),
 		}
+
 		personDetections, err := queries.GetPersonDetections(ctx, params)
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
@@ -174,7 +176,7 @@ func makeUpdatePersonDetectionHandler(queries *dbschema.Queries, logger *zap.Sug
 
 		dec := json.NewDecoder(r.Body)
 
-		params := dbschema.UpdatePersonDetectionParams{}
+		var params dbschema.UpdatePersonDetectionParams
 
 		if err := dec.Decode(&params); err != nil {
 			err = fmt.Errorf("invalid request body: %w", err)
@@ -182,6 +184,8 @@ func makeUpdatePersonDetectionHandler(queries *dbschema.Queries, logger *zap.Sug
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
+
+		params.ID = personDetection.ID
 
 		personDetection, err := queries.UpdatePersonDetection(ctx, params)
 		var pgErr *pgconn.PgError

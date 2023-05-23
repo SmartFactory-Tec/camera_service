@@ -7,12 +7,14 @@ package dbschema
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createLocation = `-- name: CreateLocation :one
 insert into locations (name, description)
 values ($1, $2)
-returning id
+returning id, name, description
 `
 
 type CreateLocationParams struct {
@@ -20,11 +22,11 @@ type CreateLocationParams struct {
 	Description string `json:"description"`
 }
 
-func (q *Queries) CreateLocation(ctx context.Context, arg CreateLocationParams) (int64, error) {
+func (q *Queries) CreateLocation(ctx context.Context, arg CreateLocationParams) (Location, error) {
 	row := q.db.QueryRow(ctx, createLocation, arg.Name, arg.Description)
-	var id int64
-	err := row.Scan(&id)
-	return id, err
+	var i Location
+	err := row.Scan(&i.ID, &i.Name, &i.Description)
+	return i, err
 }
 
 const deleteLocation = `-- name: DeleteLocation :exec
@@ -63,7 +65,7 @@ func (q *Queries) GetLocations(ctx context.Context) ([]Location, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Location
+	items := []Location{}
 	for rows.Next() {
 		var i Location
 		if err := rows.Scan(&i.ID, &i.Name, &i.Description); err != nil {
@@ -79,16 +81,16 @@ func (q *Queries) GetLocations(ctx context.Context) ([]Location, error) {
 
 const updateLocation = `-- name: UpdateLocation :one
 update locations
-set name       = $2,
-    description= $3
+set name       = coalesce($2, name),
+    description= coalesce($3, name)
 where id = $1
 returning id, name, description
 `
 
 type UpdateLocationParams struct {
-	ID          int64  `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
+	ID          int64       `json:"id"`
+	Name        pgtype.Text `json:"name"`
+	Description pgtype.Text `json:"description"`
 }
 
 func (q *Queries) UpdateLocation(ctx context.Context, arg UpdateLocationParams) (Location, error) {

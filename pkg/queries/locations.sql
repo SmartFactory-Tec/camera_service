@@ -11,12 +11,12 @@ order by id;
 -- name: CreateLocation :one
 insert into locations (name, description)
 values ($1, $2)
-returning id;
+returning *;
 
 -- name: UpdateLocation :one
 update locations
-set name       = $2,
-    description= $3
+set name       = coalesce(sqlc.narg('name'), name),
+    description= coalesce(sqlc.narg('description'), name)
 where id = $1
 returning *;
 

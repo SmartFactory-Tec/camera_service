@@ -31,7 +31,7 @@ func makeCreateLocationHandler(queries *dbschema.Queries, logger *zap.SugaredLog
 			return
 		}
 
-		id, err := queries.CreateLocation(ctx, params)
+		location, err := queries.CreateLocation(ctx, params)
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
 			HandlePqError(w, r, pgErr, logger)
@@ -43,8 +43,22 @@ func makeCreateLocationHandler(queries *dbschema.Queries, logger *zap.SugaredLog
 			return
 		}
 
-		w.Header().Add("Location", path.Join(r.URL.String(), fmt.Sprintf("/%d", id)))
+		body, err := json.Marshal(location)
+		if err != nil {
+			err = fmt.Errorf("error marshaling json body: %w", err)
+			logger.Error(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Add("Location", path.Join(r.URL.String(), fmt.Sprintf("/%d", location.ID)))
+		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
+
+		if _, err := w.Write(body); err != nil {
+			err = fmt.Errorf("error writing body: %w", err)
+			logger.Error(err)
+		}
 	}
 }
 
@@ -141,30 +155,16 @@ func makeUpdateLocationHandler(queries *dbschema.Queries, logger *zap.SugaredLog
 
 		dec := json.NewDecoder(r.Body)
 
-		var reqBody struct {
-			Name        *string `json:"name"`
-			Description *string `json:"description"`
-		}
+		var params dbschema.UpdateLocationParams
 
-		if err := dec.Decode(&reqBody); err != nil {
+		if err := dec.Decode(&params); err != nil {
 			err = fmt.Errorf("invalid reqBody: %w", err)
 			logger.Error(err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
-		params := dbschema.UpdateLocationParams{
-			ID:          location.ID,
-			Name:        location.Name,
-			Description: location.Description,
-		}
-
-		if reqBody.Name != nil {
-			params.Name = *reqBody.Name
-		}
-		if reqBody.Description != nil {
-			params.Description = *reqBody.Description
-		}
+		params.ID = location.ID
 
 		location, err := queries.UpdateLocation(ctx, params)
 		var pgErr *pgconn.PgError

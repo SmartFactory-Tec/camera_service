@@ -21,7 +21,7 @@ returning id, camera_id, detection_date, target_direction
 type CreatePersonDetectionParams struct {
 	CameraID        int64              `json:"camera_id"`
 	DetectionDate   pgtype.Timestamptz `json:"detection_date"`
-	TargetDirection Direction          `json:"target_direction"`
+	TargetDirection dbenums.Direction  `json:"target_direction"`
 }
 
 func (q *Queries) CreatePersonDetection(ctx context.Context, arg CreatePersonDetectionParams) (PersonDetection, error) {
@@ -83,7 +83,7 @@ func (q *Queries) GetPersonDetections(ctx context.Context, arg GetPersonDetectio
 		return nil, err
 	}
 	defer rows.Close()
-	var items []PersonDetection
+	items := []PersonDetection{}
 	for rows.Next() {
 		var i PersonDetection
 		if err := rows.Scan(
@@ -122,7 +122,7 @@ func (q *Queries) GetPersonDetectionsForCamera(ctx context.Context, arg GetPerso
 		return nil, err
 	}
 	defer rows.Close()
-	var items []PersonDetection
+	items := []PersonDetection{}
 	for rows.Next() {
 		var i PersonDetection
 		if err := rows.Scan(
@@ -151,10 +151,10 @@ returning id, camera_id, detection_date, target_direction
 `
 
 type UpdatePersonDetectionParams struct {
-	ID              int64              `json:"id"`
-	CameraID        pgtype.Int8        `json:"camera_id"`
-	DetectionDate   pgtype.Timestamptz `json:"detection_date"`
-	TargetDirection dbenums.Direction  `json:"target_direction"`
+	ID              int64                 `json:"id"`
+	CameraID        pgtype.Int8           `json:"camera_id"`
+	DetectionDate   pgtype.Timestamptz    `json:"detection_date"`
+	TargetDirection dbenums.NullDirection `json:"target_direction"`
 }
 
 func (q *Queries) UpdatePersonDetection(ctx context.Context, arg UpdatePersonDetectionParams) (PersonDetection, error) {

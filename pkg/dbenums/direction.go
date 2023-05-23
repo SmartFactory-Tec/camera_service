@@ -14,8 +14,8 @@ const (
 	DirectionNone  Direction = "none"
 )
 
-func (d *Direction) Value() (driver.Value, error) {
-	return string(*d), nil
+func (d Direction) Value() (driver.Value, error) {
+	return string(d), nil
 }
 
 func (d *Direction) Scan(src any) error {
@@ -60,7 +60,7 @@ type NullDirection struct {
 	Valid     bool
 }
 
-func (d *NullDirection) Value() (driver.Value, error) {
+func (d NullDirection) Value() (driver.Value, error) {
 	if !d.Valid {
 		return nil, nil
 	}

@@ -7,6 +7,7 @@ import (
 	"github.com/SmartFactory-Tec/camera_service/pkg/migrations"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	_ "github.com/lib/pq"
 	"github.com/pressly/goose/v3"
 	"go.uber.org/zap"
 	"net/http"
@@ -48,7 +49,8 @@ func testConnection(conn *pgx.Conn, logger *zap.SugaredLogger) {
 }
 
 func updateDatabaseSchema(config DbConfig, logger *zap.SugaredLogger) {
-	connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable")
+	connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
+		config.User, config.Password, config.Hostname, config.Port, config.Database)
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
 		logger.Fatalf("could not connect to database for migrations: %w", err)

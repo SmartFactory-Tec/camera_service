@@ -6,7 +6,7 @@ create table locations
     description text not null
 );
 
-create type camera_orientation as enum ('vertical', 'horizontal', 'inverted_vertical', 'inverted_horizontal');
+create type orientation as enum ('vertical', 'horizontal', 'inverted_vertical', 'inverted_horizontal');
 create type direction as enum ('left', 'right', 'none');
 
 create table cameras
@@ -16,8 +16,7 @@ create table cameras
     connection_string text                     not null,
     location_text     text                     not null,
     location_id       int references locations not null,
-    orientation     camera_orientation not null default 'horizontal',
-    entry_direction direction          not null default 'none'
+    orientation     orientation not null default 'horizontal'
 );
 
 create table camera_detections
@@ -49,7 +48,7 @@ drop table camera_detections;
 drop table cameras;
 drop table locations;
 
-drop type camera_orientation;
+drop type orientation;
 drop type direction;
 
 
