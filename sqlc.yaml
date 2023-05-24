@@ -12,12 +12,12 @@ sql:
         emit_empty_slices: true
         json_tags_case_style: snake
         overrides:
-          - db_type: "camera_orientation"
-            go_type: "github.com/SmartFactory-Tec/camera_service/pkg/dbenums.CameraOrientation"
+          - db_type: "orientation"
+            go_type: "github.com/SmartFactory-Tec/camera_service/pkg/dbenums.Orientation"
           - db_type: "direction"
             go_type: "github.com/SmartFactory-Tec/camera_service/pkg/dbenums.Direction"
-          - db_type: "camera_orientation"
-            go_type: "github.com/SmartFactory-Tec/camera_service/pkg/dbenums.NullCameraOrientation"
+          - db_type: "orientation"
+            go_type: "github.com/SmartFactory-Tec/camera_service/pkg/dbenums.NullOrientation"
             nullable: true
           - db_type: "direction"
             go_type: "github.com/SmartFactory-Tec/camera_service/pkg/dbenums.NullDirection"

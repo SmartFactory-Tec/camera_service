@@ -100,12 +100,12 @@ func (ns NullOrientation) Value() (driver.Value, error) {
 }
 
 type Camera struct {
-	ID               int64       `json:"id"`
-	Name             string      `json:"name"`
-	ConnectionString string      `json:"connection_string"`
-	LocationText     string      `json:"location_text"`
-	LocationID       int32       `json:"location_id"`
-	Orientation      Orientation `json:"orientation"`
+	ID               int64               `json:"id"`
+	Name             string              `json:"name"`
+	ConnectionString string              `json:"connection_string"`
+	LocationText     string              `json:"location_text"`
+	LocationID       int32               `json:"location_id"`
+	Orientation      dbenums.Orientation `json:"orientation"`
 }
 
 type CameraDetection struct {

@@ -6,27 +6,27 @@ import (
 	"fmt"
 )
 
-type CameraOrientation string
+type Orientation string
 
 const (
-	CameraOrientationVertical           CameraOrientation = "vertical"
-	CameraOrientationHorizontal         CameraOrientation = "horizontal"
-	CameraOrientationInvertedVertical   CameraOrientation = "inverted_vertical"
-	CameraOrientationInvertedHorizontal CameraOrientation = "inverted_horizontal"
+	CameraOrientationVertical           Orientation = "vertical"
+	CameraOrientationHorizontal         Orientation = "horizontal"
+	CameraOrientationInvertedVertical   Orientation = "inverted_vertical"
+	CameraOrientationInvertedHorizontal Orientation = "inverted_horizontal"
 )
 
-func (co CameraOrientation) Value() (driver.Value, error) {
+func (co Orientation) Value() (driver.Value, error) {
 	return string(co), nil
 }
 
-func (co *CameraOrientation) Scan(src any) error {
+func (co *Orientation) Scan(src any) error {
 	switch src := src.(type) {
 	case string:
 		if src == string(CameraOrientationHorizontal) ||
 			src == string(CameraOrientationVertical) ||
 			src == string(CameraOrientationInvertedHorizontal) ||
 			src == string(CameraOrientationInvertedVertical) {
-			*co = CameraOrientation(src)
+			*co = Orientation(src)
 			return nil
 		} else {
 			return fmt.Errorf("invalid value for enum CameraOrientation")
@@ -36,11 +36,11 @@ func (co *CameraOrientation) Scan(src any) error {
 	}
 }
 
-func (co *CameraOrientation) MarshalJSON() ([]byte, error) {
+func (co *Orientation) MarshalJSON() ([]byte, error) {
 	return json.Marshal(string(*co))
 }
 
-func (co *CameraOrientation) UnmarshalJSON(data []byte) error {
+func (co *Orientation) UnmarshalJSON(data []byte) error {
 	var s string
 	err := json.Unmarshal(data, &s)
 	if err != nil {
@@ -51,42 +51,42 @@ func (co *CameraOrientation) UnmarshalJSON(data []byte) error {
 		s == string(CameraOrientationVertical) ||
 		s == string(CameraOrientationInvertedHorizontal) ||
 		s == string(CameraOrientationInvertedVertical) {
-		*co = CameraOrientation(s)
+		*co = Orientation(s)
 		return nil
 	} else {
 		return fmt.Errorf("invalid value for enum CameraOrientation")
 	}
 }
 
-type NullCameraOrientation struct {
-	CameraOrientation CameraOrientation
-	Valid             bool
+type NullOrientation struct {
+	Orientation Orientation
+	Valid       bool
 }
 
-func (co NullCameraOrientation) Value() (driver.Value, error) {
+func (co NullOrientation) Value() (driver.Value, error) {
 	if !co.Valid {
 		return nil, nil
 	}
-	return co.CameraOrientation.Value()
+	return co.Orientation.Value()
 }
 
-func (co *NullCameraOrientation) Scan(src any) error {
-	if err := co.CameraOrientation.Scan(src); err != nil {
+func (co *NullOrientation) Scan(src any) error {
+	if err := co.Orientation.Scan(src); err != nil {
 		return err
 	}
 	co.Valid = true
 	return nil
 }
 
-func (co *NullCameraOrientation) MarshalJSON() ([]byte, error) {
+func (co *NullOrientation) MarshalJSON() ([]byte, error) {
 	if !co.Valid {
 		return json.Marshal(nil)
 	}
-	return json.Marshal(co.CameraOrientation)
+	return json.Marshal(co.Orientation)
 }
 
-func (co *NullCameraOrientation) UnmarshalJSON(data []byte) error {
-	if err := json.Unmarshal(data, &co.CameraOrientation); err != nil {
+func (co *NullOrientation) UnmarshalJSON(data []byte) error {
+	if err := json.Unmarshal(data, &co.Orientation); err != nil {
 		return err
 	}
 	co.Valid = true

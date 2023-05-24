@@ -8,6 +8,7 @@ package dbschema
 import (
 	"context"
 
+	"github.com/SmartFactory-Tec/camera_service/pkg/dbenums"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -18,11 +19,11 @@ returning id, name, connection_string, location_text, location_id, orientation
 `
 
 type CreateCameraParams struct {
-	Name             string      `json:"name"`
-	ConnectionString string      `json:"connection_string"`
-	LocationText     string      `json:"location_text"`
-	LocationID       int32       `json:"location_id"`
-	Orientation      Orientation `json:"orientation"`
+	Name             string              `json:"name"`
+	ConnectionString string              `json:"connection_string"`
+	LocationText     string              `json:"location_text"`
+	LocationID       int32               `json:"location_id"`
+	Orientation      dbenums.Orientation `json:"orientation"`
 }
 
 func (q *Queries) CreateCamera(ctx context.Context, arg CreateCameraParams) (Camera, error) {
@@ -121,12 +122,12 @@ returning id, name, connection_string, location_text, location_id, orientation
 `
 
 type UpdateCameraParams struct {
-	ID               int64           `json:"id"`
-	Name             pgtype.Text     `json:"name"`
-	ConnectionString pgtype.Text     `json:"connection_string"`
-	LocationText     pgtype.Text     `json:"location_text"`
-	LocationID       pgtype.Int4     `json:"location_id"`
-	Orientation      NullOrientation `json:"orientation"`
+	ID               int64                   `json:"id"`
+	Name             pgtype.Text             `json:"name"`
+	ConnectionString pgtype.Text             `json:"connection_string"`
+	LocationText     pgtype.Text             `json:"location_text"`
+	LocationID       pgtype.Int4             `json:"location_id"`
+	Orientation      dbenums.NullOrientation `json:"orientation"`
 }
 
 func (q *Queries) UpdateCamera(ctx context.Context, arg UpdateCameraParams) (Camera, error) {
