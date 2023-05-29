@@ -5,8 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/SmartFactory-Tec/camera_service/pkg/migrations"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/lib/pq"
 	"github.com/pressly/goose/v3"
 	"go.uber.org/zap"
@@ -22,23 +22,23 @@ type DbConfig struct {
 	Password string
 }
 
-func connectToDb(config DbConfig, logger *zap.SugaredLogger) *pgx.Conn {
+func connectToDb(config DbConfig, logger *zap.SugaredLogger) *pgxpool.Pool {
 	connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
 		config.User, config.Password, config.Hostname, config.Port, config.Database)
 
-	conn, err := pgx.Connect(context.Background(), connStr)
+	pool, err := pgxpool.New(context.Background(), connStr)
 	if err != nil {
 		logger.Fatal("error parsing db connection string: %w", err)
 	}
 
-	testConnection(conn, logger)
+	testConnection(pool, logger)
 
 	logger.Infow("connected to database", "name", config.Database)
 
-	return conn
+	return pool
 }
 
-func testConnection(conn *pgx.Conn, logger *zap.SugaredLogger) {
+func testConnection(conn *pgxpool.Pool, logger *zap.SugaredLogger) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
