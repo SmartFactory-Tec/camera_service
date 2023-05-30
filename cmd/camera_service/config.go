@@ -59,6 +59,10 @@ func loadConfig(logger *zap.SugaredLogger) Config {
 	configLoader.SetDefault("db.user", "")
 	configLoader.SetDefault("db.password", "")
 
+	// cors config
+	configLoader.SetDefault("cors.allowed_origins", make([]string, 0))
+	configLoader.SetDefault("cors.allow_all_origins", false)
+
 	err := configLoader.ReadInConfig()
 
 	if err != nil {
