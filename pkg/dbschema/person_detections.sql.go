@@ -68,7 +68,7 @@ func (q *Queries) GetPersonDetection(ctx context.Context, id int64) (PersonDetec
 const getPersonDetections = `-- name: GetPersonDetections :many
 select id, camera_id, detection_date, target_direction
 from person_detections
-order by detection_date
+order by detection_date desc
 offset $1::int limit $2::int
 `
 
@@ -106,7 +106,7 @@ const getPersonDetectionsForCamera = `-- name: GetPersonDetectionsForCamera :man
 select id, camera_id, detection_date, target_direction
 from person_detections
 where camera_id = $1
-order by detection_date
+order by detection_date desc
 offset $2::int limit $3::int
 `
 

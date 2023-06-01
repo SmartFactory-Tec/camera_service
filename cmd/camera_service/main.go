@@ -48,29 +48,30 @@ func main() {
 	})
 
 	r.Route("/cameras", func(r chi.Router) {
-		r.Get("/", makeGetCamerasHandler(queries, logger))
-		r.Post("/", makeCreateCameraHandler(queries, logger))
+		r.Get("/", getCameras(queries, logger))
+		r.Post("/", postCamera(queries, logger))
 
 		r.Route("/{cameraId}", func(r chi.Router) {
 			r.Use(cameraCtx(queries, logger))
-			r.Get("/", makeGetCameraHandler(logger))
-			r.Patch("/", makeUpdateCameraHandler(queries, logger))
-			r.Delete("/", makeDeleteCameraHandler(queries, logger))
+			r.Get("/", getCamera(logger))
+			r.Patch("/", patchCamera(queries, logger))
+			r.Delete("/", deleteCamera(queries, logger))
 
-			r.Get("/cameraDetections", makeGetPersonDetectionsByCameraHandler(queries, logger))
+			r.Get("/personDetections", getCameraPersonDetections(queries, logger))
+			r.Post("/personDetections", postCameraPersonDetection(queries, logger)
 		})
 
 	})
 
 	r.Route("/personDetections", func(r chi.Router) {
-		r.Get("/", makeGetPersonDetectionsHandler(queries, logger))
-		r.Post("/", makeCreatePersonDetectionHandler(queries, logger))
+		r.Get("/", getPersonDetections(queries, logger))
+		r.Post("/", postPersonDetection(queries, logger))
 
 		r.Route("/{personDetectionId}", func(r chi.Router) {
 			r.Use(personDetectionCtx(queries, logger))
-			r.Get("/", makeGetPersonDetectionHandler(logger))
-			r.Patch("/", makeUpdatePersonDetectionHandler(queries, logger))
-			r.Delete("/", makeDeletePersonDetectionHandler(queries, logger))
+			r.Get("/", getPersonDetection(logger))
+			r.Patch("/", patchPersonDetection(queries, logger))
+			r.Delete("/", deletePersonDetection(queries, logger))
 		})
 	})
 

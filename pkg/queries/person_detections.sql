@@ -6,14 +6,14 @@ where id = $1;
 -- name: GetPersonDetections :many
 select *
 from person_detections
-order by detection_date
+order by detection_date desc
 offset @detection_offset::int limit @count::int;
 
 -- name: GetPersonDetectionsForCamera :many
 select *
 from person_detections
 where camera_id = $1
-order by detection_date
+order by detection_date desc
 offset @detection_offset::int limit @count::int;
 
 -- name: CreatePersonDetection :one
