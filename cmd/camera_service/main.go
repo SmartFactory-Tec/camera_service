@@ -58,7 +58,9 @@ func main() {
 			r.Delete("/", deleteCamera(queries, logger))
 
 			r.Get("/personDetections", getCameraPersonDetections(queries, logger))
-			r.Post("/personDetections", postCameraPersonDetection(queries, logger)
+			r.Post("/personDetections", postCameraPersonDetection(queries, logger))
+
+			r.Get("/dailyPersonDetectionsCount", getDailyPersonDetectionsCount(queries, logger))
 		})
 
 	})

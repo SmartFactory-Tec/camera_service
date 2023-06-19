@@ -33,3 +33,17 @@ returning *;
 delete
 from person_detections
 where id = $1;
+
+-- name: GetDailyPersonDetectionsCount :many
+with detection_dates as (select detection_date::date
+                         from person_detections
+                         where camera_id = $1)
+select date_series.date::date as date,
+       count(detection_dates.detection_date) as count
+from (select(current_date - b.offs) as date
+      from (select generate_series(0, current_date - (current_date - sqlc.arg('interval')::interval)::date,
+                                   1) as offs) as b) as date_series
+         left outer join detection_dates
+                         on (date_series.date::date = detection_date)
+group by date_series.date
+order by date_series.date;

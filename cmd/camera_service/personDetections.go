@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/zap"
 	"net/http"
 	"path"
@@ -161,6 +162,63 @@ func postPersonDetection(queries *dbschema.Queries, logger *zap.SugaredLogger) h
 		if _, err = w.Write(body); err != nil {
 			err = fmt.Errorf("error writing body: %w", err)
 			logger.Error(err)
+		}
+	}
+}
+
+func getDailyPersonDetectionsCount(queries *dbschema.Queries, logger *zap.SugaredLogger) http.HandlerFunc {
+	logger = logger.Named("getDailyPersonDetectionsCount")
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
+		camera := ctx.Value("camera").(dbschema.Camera)
+
+		daysStr := r.URL.Query().Get("days")
+		monthsStr := r.URL.Query().Get("months")
+		days, err := strconv.ParseInt(daysStr, 10, 32)
+		if err != nil {
+			days = 0
+		}
+
+		months, err := strconv.ParseInt(monthsStr, 10, 32)
+		if err != nil {
+			months = 0
+		}
+
+		params := dbschema.GetDailyPersonDetectionsCountParams{
+			CameraID: camera.ID,
+			Interval: pgtype.Interval{
+				Microseconds: 0,
+				Days:         int32(days),
+				Months:       int32(months),
+				Valid:        true,
+			},
+		}
+
+		dailyPersonDetectionsCount, err := queries.GetDailyPersonDetectionsCount(ctx, params)
+
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			HandlePqError(w, r, pgErr, logger)
+			return
+		} else if err != nil {
+			err := fmt.Errorf("error getting person detections: %w", err)
+			logger.Error(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		body, err := json.Marshal(dailyPersonDetectionsCount)
+		if err != nil {
+			logger.Errorf("error marshaling json body: %s", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Add("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		if _, err := w.Write(body); err != nil {
+			logger.Errorf("error writing json body: %s", err)
 		}
 	}
 }
